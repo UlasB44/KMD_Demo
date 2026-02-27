@@ -1,0 +1,70 @@
+version: 2
+
+models:
+  - name: stg_schools
+    description: Staged schools data with basic cleaning
+    columns:
+      - name: school_id
+        description: Primary key for schools
+        tests:
+          - unique
+          - not_null
+      - name: municipality_code
+        description: Foreign key to municipalities
+        tests:
+          - not_null
+      - name: school_name
+        tests:
+          - not_null
+
+  - name: stg_teachers
+    description: Staged teachers data with masked PII
+    columns:
+      - name: teacher_id
+        description: Primary key for teachers
+        tests:
+          - unique
+          - not_null
+      - name: school_id
+        description: Foreign key to schools
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_schools')
+              field: school_id
+
+  - name: stg_students
+    description: Staged students data with masked PII
+    columns:
+      - name: student_id
+        description: Primary key for students
+        tests:
+          - unique
+          - not_null
+      - name: school_id
+        description: Foreign key to schools
+        tests:
+          - not_null
+
+  - name: stg_classes
+    description: Staged classes data
+    columns:
+      - name: class_id
+        description: Primary key for classes
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_grades
+    description: Staged grades fact data
+    columns:
+      - name: grade_record_id
+        description: Primary key for grade records
+        tests:
+          - unique
+          - not_null
+      - name: grade_value
+        description: Grade on Danish 7-point scale
+        tests:
+          - accepted_values:
+              values: ['12', '10', '7', '4', '02', '00', '-3']

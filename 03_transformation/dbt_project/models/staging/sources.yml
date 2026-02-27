@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+  - name: raw
+    database: KMD_STAGING
+    schema: RAW
+    tables:
+      - name: schools_raw
+      - name: teachers_raw
+      - name: students_raw
+      - name: classes_raw
+      - name: grades_raw
+      - name: budgets_raw
+
+  - name: shared
+    database: KMD_SCHOOLS
+    schema: SHARED
+    tables:
+      - name: dim_municipalities
+      - name: dim_grade_scale
+      - name: dim_subjects
+      - name: dim_special_needs

@@ -1,0 +1,6 @@
+school_id,municipality_code,school_name,school_type,address,postal_code,city,phone,email,founded_year,student_capacity,is_active,created_at,updated_at
+851-SCH-001,851,Mark Friskole,Friskole,Centrumvej 14,3282,Aalborg,+45 34 63 36 77,kontor@markfriskole.dk,1990,382,True,2026-02-27T13:34:08.124370,2026-02-27T13:34:08.124373
+851-SCH-002,851,Kirke Folkeskole,Folkeskole,Kirkevej 183,3830,Aalborg,+45 78 76 12 83,kontor@kirkefolkeskole.dk,1941,537,True,2026-02-27T13:34:08.124381,2026-02-27T13:34:08.124382
+851-SCH-003,851,Park Skole,Friskole,Markvej 8,4706,Aalborg,+45 98 44 72 22,kontor@parkskole.dk,1867,255,True,2026-02-27T13:34:08.124387,2026-02-27T13:34:08.124388
+851-SCH-004,851,Sondre Folkeskole,Privatskole,Sondrevej 43,2853,Aalborg,+45 69 48 70 89,kontor@sondrefolkeskole.dk,2001,310,True,2026-02-27T13:34:08.124393,2026-02-27T13:34:08.124394
+851-SCH-005,851,Centrum Folkeskole,Friskole,Nordrevej 189,3506,Aalborg,+45 35 26 59 69,kontor@centrumfolkeskole.dk,1973,774,True,2026-02-27T13:34:08.124399,2026-02-27T13:34:08.124399

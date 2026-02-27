@@ -1,0 +1,13 @@
+school_id,municipality_code,school_name,school_type,address,postal_code,city,phone,email,founded_year,student_capacity,is_active,created_at,updated_at
+101-SCH-001,101,Kirke Folkeskole,Folkeskole,Borgvej 46,6095,Kobenhavn,+45 62 35 41 45,kontor@kirkefolkeskole.dk,1957,529,True,2026-02-27T13:34:07.838226,2026-02-27T13:34:07.838247
+101-SCH-002,101,Slot Skole,Folkeskole,Sondrevej 158,8142,Kobenhavn,+45 34 12 38 93,kontor@slotskole.dk,1951,609,True,2026-02-27T13:34:07.838257,2026-02-27T13:34:07.838258
+101-SCH-003,101,Sondre Privatskole,Folkeskole,Nordrevej 99,2333,Kobenhavn,+45 40 74 33 62,kontor@sondreprivatskole.dk,1922,449,True,2026-02-27T13:34:07.838264,2026-02-27T13:34:07.838265
+101-SCH-004,101,Eng Skole,Folkeskole,Nordrevej 34,4682,Kobenhavn,+45 67 15 38 57,kontor@engskole.dk,1915,641,True,2026-02-27T13:34:07.838271,2026-02-27T13:34:07.838271
+101-SCH-005,101,Borg Folkeskole,Friskole,Parkvej 159,9042,Kobenhavn,+45 81 40 19 20,kontor@borgfolkeskole.dk,1895,641,True,2026-02-27T13:34:07.838277,2026-02-27T13:34:07.838278
+101-SCH-006,101,Park Friskole,Privatskole,Slotvej 115,4339,Kobenhavn,+45 84 99 33 33,kontor@parkfriskole.dk,1970,578,True,2026-02-27T13:34:07.838283,2026-02-27T13:34:07.838284
+101-SCH-007,101,Have Friskole,Friskole,Markvej 39,7116,Kobenhavn,+45 65 71 11 22,kontor@havefriskole.dk,2009,340,True,2026-02-27T13:34:07.838288,2026-02-27T13:34:07.838289
+101-SCH-008,101,Skov Privatskole,Folkeskole,Bakkevej 32,2562,Kobenhavn,+45 62 52 78 95,kontor@skovprivatskole.dk,1972,390,True,2026-02-27T13:34:07.838294,2026-02-27T13:34:07.838295
+101-SCH-009,101,Strand Privatskole,Folkeskole,Markvej 128,5004,Kobenhavn,+45 98 89 90 52,kontor@strandprivatskole.dk,2015,408,True,2026-02-27T13:34:07.838299,2026-02-27T13:34:07.838300
+101-SCH-010,101,Centrum Privatskole,Privatskole,Centrumvej 91,1911,Kobenhavn,+45 64 67 11 66,kontor@centrumprivatskole.dk,1925,667,True,2026-02-27T13:34:07.838305,2026-02-27T13:34:07.838306
+101-SCH-011,101,Bakke Privatskole,Friskole,Centrumvej 194,7541,Kobenhavn,+45 62 59 64 21,kontor@bakkeprivatskole.dk,2000,229,True,2026-02-27T13:34:07.838311,2026-02-27T13:34:07.838312
+101-SCH-012,101,Vestre Skole,Friskole,Strandvej 196,6168,Kobenhavn,+45 53 82 85 55,kontor@vestreskole.dk,1935,274,True,2026-02-27T13:34:07.838317,2026-02-27T13:34:07.838317

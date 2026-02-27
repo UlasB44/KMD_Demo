@@ -1,0 +1,9 @@
+school_id,municipality_code,school_name,school_type,address,postal_code,city,phone,email,founded_year,student_capacity,is_active,created_at,updated_at
+751-SCH-001,751,Skov Folkeskole,Privatskole,Kirkevej 175,1820,Aarhus,+45 72 65 22 76,kontor@skovfolkeskole.dk,1946,259,True,2026-02-27T13:34:07.972649,2026-02-27T13:34:07.972651
+751-SCH-002,751,Centrum Skole,Friskole,Strandvej 31,9401,Aarhus,+45 77 53 14 78,kontor@centrumskole.dk,1879,351,True,2026-02-27T13:34:07.972657,2026-02-27T13:34:07.972657
+751-SCH-003,751,Strand Folkeskole,Privatskole,Kirkevej 199,5410,Aarhus,+45 63 39 97 26,kontor@strandfolkeskole.dk,1886,450,True,2026-02-27T13:34:07.972662,2026-02-27T13:34:07.972663
+751-SCH-004,751,Eng Folkeskole,Friskole,Slotvej 8,9121,Aarhus,+45 93 99 33 82,kontor@engfolkeskole.dk,1874,394,True,2026-02-27T13:34:07.972668,2026-02-27T13:34:07.972668
+751-SCH-005,751,Nordre Privatskole,Folkeskole,Markvej 146,8080,Aarhus,+45 98 10 27 24,kontor@nordreprivatskole.dk,1886,695,True,2026-02-27T13:34:07.972673,2026-02-27T13:34:07.972674
+751-SCH-006,751,Bakke Skole,Folkeskole,Strandvej 58,5700,Aarhus,+45 63 58 79 31,kontor@bakkeskole.dk,2004,479,True,2026-02-27T13:34:07.972679,2026-02-27T13:34:07.972679
+751-SCH-007,751,Mark Skole,Friskole,Ostrevej 192,1067,Aarhus,+45 87 30 87 85,kontor@markskole.dk,1883,416,True,2026-02-27T13:34:07.972684,2026-02-27T13:34:07.972685
+751-SCH-008,751,Vestre Privatskole,Friskole,Strandvej 48,2513,Aarhus,+45 73 42 94 49,kontor@vestreprivatskole.dk,1917,321,True,2026-02-27T13:34:07.972689,2026-02-27T13:34:07.972690

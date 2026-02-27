@@ -1,0 +1,7 @@
+school_id,municipality_code,school_name,school_type,address,postal_code,city,phone,email,founded_year,student_capacity,is_active,created_at,updated_at
+461-SCH-001,461,Vestre Skole,Friskole,Bakkevej 156,4215,Odense,+45 99 15 27 30,kontor@vestreskole.dk,1912,633,True,2026-02-27T13:34:08.058082,2026-02-27T13:34:08.058084
+461-SCH-002,461,Centrum Privatskole,Folkeskole,Parkvej 122,2064,Odense,+45 61 51 65 76,kontor@centrumprivatskole.dk,1928,786,True,2026-02-27T13:34:08.058091,2026-02-27T13:34:08.058092
+461-SCH-003,461,Ostre Privatskole,Friskole,Skovvej 106,9737,Odense,+45 30 60 57 52,kontor@ostreprivatskole.dk,1864,655,True,2026-02-27T13:34:08.058097,2026-02-27T13:34:08.058098
+461-SCH-004,461,Sondre Skole,Privatskole,Parkvej 18,7570,Odense,+45 88 59 61 45,kontor@sondreskole.dk,1971,531,True,2026-02-27T13:34:08.058103,2026-02-27T13:34:08.058104
+461-SCH-005,461,Bakke Privatskole,Friskole,Sondrevej 94,8396,Odense,+45 55 50 70 64,kontor@bakkeprivatskole.dk,2014,761,True,2026-02-27T13:34:08.058109,2026-02-27T13:34:08.058110
+461-SCH-006,461,Park Folkeskole,Friskole,Borgvej 153,8629,Odense,+45 45 15 12 78,kontor@parkfolkeskole.dk,1909,435,True,2026-02-27T13:34:08.058115,2026-02-27T13:34:08.058115

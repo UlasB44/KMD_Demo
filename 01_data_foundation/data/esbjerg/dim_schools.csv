@@ -1,0 +1,5 @@
+school_id,municipality_code,school_name,school_type,address,postal_code,city,phone,email,founded_year,student_capacity,is_active,created_at,updated_at
+561-SCH-001,561,Ostre Skole,Friskole,Engvej 89,6206,Esbjerg,+45 43 16 87 52,kontor@ostreskole.dk,1893,524,True,2026-02-27T13:34:08.184133,2026-02-27T13:34:08.184136
+561-SCH-002,561,Bakke Privatskole,Privatskole,Borgvej 134,7039,Esbjerg,+45 47 34 60 76,kontor@bakkeprivatskole.dk,1972,317,True,2026-02-27T13:34:08.184142,2026-02-27T13:34:08.184143
+561-SCH-003,561,Strand Folkeskole,Friskole,Centrumvej 177,3336,Esbjerg,+45 98 50 79 95,kontor@strandfolkeskole.dk,1883,425,True,2026-02-27T13:34:08.184148,2026-02-27T13:34:08.184148
+561-SCH-004,561,Nordre Privatskole,Privatskole,Strandvej 103,7265,Esbjerg,+45 82 51 67 80,kontor@nordreprivatskole.dk,1882,768,True,2026-02-27T13:34:08.184154,2026-02-27T13:34:08.184155

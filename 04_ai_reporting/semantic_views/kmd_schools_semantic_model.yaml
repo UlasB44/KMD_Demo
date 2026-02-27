@@ -1,0 +1,452 @@
+name: kmd_schools_semantic_model
+description: |
+  Semantic model for KMD Denmark Schools analytics.
+  This model enables natural language queries about school performance,
+  student grades, teacher data, and municipal education statistics.
+  
+  Example questions this model can answer:
+  - What is the average grade in Copenhagen schools?
+  - Which schools have the highest passing rates?
+  - How many students are enrolled in each municipality?
+  - What subjects have the lowest performance?
+
+tables:
+  - name: dim_schools
+    description: School dimension table containing all Danish municipality schools
+    base_table:
+      database: KMD_ANALYTICS
+      schema: GOLD
+      table: DIM_SCHOOLS
+    
+    dimensions:
+      - name: school_id
+        description: Unique identifier for each school
+        expr: school_id
+        data_type: VARCHAR
+        unique: true
+        
+      - name: school_name
+        description: Name of the school
+        expr: school_name
+        data_type: VARCHAR
+        sample_values: ["Nordre Skole", "Centrum Folkeskole", "Park Friskole"]
+        
+      - name: school_type
+        description: Type of school (Folkeskole, Privatskole, Friskole)
+        expr: school_type
+        data_type: VARCHAR
+        sample_values: ["Folkeskole", "Privatskole", "Friskole"]
+        
+      - name: municipality_code
+        description: Municipality code where school is located
+        expr: municipality_code
+        data_type: VARCHAR
+        
+      - name: municipality_name
+        description: Municipality name (Copenhagen, Aarhus, Odense, Aalborg, Esbjerg)
+        expr: municipality_name
+        data_type: VARCHAR
+        sample_values: ["Copenhagen", "Aarhus", "Odense", "Aalborg", "Esbjerg"]
+        synonyms: ["kommune", "city", "location"]
+        
+      - name: region
+        description: Danish region name
+        expr: region
+        data_type: VARCHAR
+        
+      - name: city
+        description: City name
+        expr: city
+        data_type: VARCHAR
+        
+      - name: is_active
+        description: Whether the school is currently active
+        expr: is_active
+        data_type: BOOLEAN
+    
+    measures:
+      - name: student_capacity
+        description: Maximum student capacity of the school
+        expr: student_capacity
+        data_type: NUMBER
+        default_aggregation: sum
+        
+      - name: school_age_years
+        description: How many years the school has been established
+        expr: school_age_years
+        data_type: NUMBER
+        default_aggregation: avg
+        
+      - name: school_count
+        description: Count of schools
+        expr: "1"
+        data_type: NUMBER
+        default_aggregation: count
+
+  - name: dim_students
+    description: Student dimension table with enrolled students across all municipalities
+    base_table:
+      database: KMD_ANALYTICS
+      schema: GOLD
+      table: DIM_STUDENTS
+    
+    dimensions:
+      - name: student_id
+        description: Unique identifier for each student
+        expr: student_id
+        data_type: VARCHAR
+        unique: true
+        
+      - name: full_name
+        description: Student full name (may be masked based on role)
+        expr: full_name
+        data_type: VARCHAR
+        
+      - name: gender
+        description: Student gender (M/F)
+        expr: gender
+        data_type: VARCHAR
+        sample_values: ["M", "F"]
+        
+      - name: gender_name
+        description: Student gender name (Male/Female)
+        expr: gender_name
+        data_type: VARCHAR
+        sample_values: ["Male", "Female"]
+        
+      - name: grade
+        description: Student grade level (0-9 in Danish school system)
+        expr: grade
+        data_type: VARCHAR
+        sample_values: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        synonyms: ["klasse", "class level", "year"]
+        
+      - name: class_name
+        description: Class name (e.g., 5.A, 7.B)
+        expr: class_name
+        data_type: VARCHAR
+        
+      - name: age_group
+        description: Age group category (Indskoling, Mellemtrin, Udskoling)
+        expr: age_group
+        data_type: VARCHAR
+        sample_values: ["Indskoling (0-3)", "Mellemtrin (4-6)", "Udskoling (7-9)"]
+        
+      - name: special_needs
+        description: Special needs category if applicable
+        expr: special_needs
+        data_type: VARCHAR
+        
+      - name: has_special_needs
+        description: Whether student has special needs
+        expr: has_special_needs
+        data_type: BOOLEAN
+        
+      - name: school_id
+        description: School where student is enrolled
+        expr: school_id
+        data_type: VARCHAR
+        
+      - name: school_name
+        description: Name of student's school
+        expr: school_name
+        data_type: VARCHAR
+        
+      - name: municipality_code
+        description: Municipality code
+        expr: municipality_code
+        data_type: VARCHAR
+        
+      - name: municipality_name
+        description: Municipality name
+        expr: municipality_name
+        data_type: VARCHAR
+        
+      - name: is_active
+        description: Whether student is currently active
+        expr: is_active
+        data_type: BOOLEAN
+    
+    measures:
+      - name: age
+        description: Student age in years
+        expr: age
+        data_type: NUMBER
+        default_aggregation: avg
+        
+      - name: student_count
+        description: Count of students
+        expr: "1"
+        data_type: NUMBER
+        default_aggregation: count
+
+  - name: fact_grades
+    description: Grade fact table with all student grades
+    base_table:
+      database: KMD_ANALYTICS
+      schema: GOLD
+      table: FACT_GRADES
+    
+    dimensions:
+      - name: grade_record_id
+        description: Unique identifier for each grade record
+        expr: grade_record_id
+        data_type: VARCHAR
+        unique: true
+        
+      - name: student_id
+        description: Student who received the grade
+        expr: student_id
+        data_type: VARCHAR
+        
+      - name: school_id
+        description: School where grade was given
+        expr: school_id
+        data_type: VARCHAR
+        
+      - name: municipality_code
+        description: Municipality code
+        expr: municipality_code
+        data_type: VARCHAR
+        
+      - name: subject
+        description: Subject name (Dansk, Matematik, Engelsk, etc.)
+        expr: subject
+        data_type: VARCHAR
+        sample_values: ["Dansk", "Matematik", "Engelsk", "Fysik", "Historie"]
+        synonyms: ["fag", "course", "discipline"]
+        
+      - name: subject_category
+        description: Subject category (Sprog, Naturvidenskab, Samfundsfag, etc.)
+        expr: subject_category
+        data_type: VARCHAR
+        
+      - name: academic_year
+        description: Academic year (e.g., 2024-2025)
+        expr: academic_year
+        data_type: VARCHAR
+        synonyms: ["skoleår", "school year"]
+        
+      - name: term
+        description: Term/quarter (Q1, Q2, Q3, Q4)
+        expr: term
+        data_type: VARCHAR
+        sample_values: ["Q1", "Q2", "Q3", "Q4"]
+        synonyms: ["kvartal", "quarter", "semester"]
+        
+      - name: grade_value
+        description: Grade on Danish 7-point scale
+        expr: grade_value
+        data_type: VARCHAR
+        sample_values: ["12", "10", "7", "4", "02", "00", "-3"]
+        
+      - name: grade_name
+        description: Grade name description
+        expr: grade_name
+        data_type: VARCHAR
+        
+      - name: is_final
+        description: Whether this is a final grade
+        expr: is_final
+        data_type: BOOLEAN
+        
+      - name: is_passing
+        description: Whether the grade is passing (02 or above)
+        expr: is_passing
+        data_type: BOOLEAN
+        synonyms: ["bestået", "passed"]
+        
+      - name: grade_date
+        description: Date when grade was given
+        expr: grade_date
+        data_type: DATE
+    
+    measures:
+      - name: grade_numeric
+        description: Numeric value of the grade for calculations
+        expr: grade_numeric
+        data_type: NUMBER
+        default_aggregation: avg
+        synonyms: ["karakter", "score", "mark"]
+        
+      - name: grade_count
+        description: Count of grades
+        expr: "1"
+        data_type: NUMBER
+        default_aggregation: count
+        
+      - name: passing_count
+        description: Count of passing grades
+        expr: "CASE WHEN is_passing THEN 1 ELSE 0 END"
+        data_type: NUMBER
+        default_aggregation: sum
+        
+      - name: passing_rate
+        description: Percentage of passing grades
+        expr: "CASE WHEN is_passing THEN 100.0 ELSE 0 END"
+        data_type: NUMBER
+        default_aggregation: avg
+        synonyms: ["beståelsesprocent", "pass rate"]
+
+  - name: agg_school_performance
+    description: Pre-aggregated school performance metrics
+    base_table:
+      database: KMD_ANALYTICS
+      schema: GOLD
+      table: AGG_SCHOOL_PERFORMANCE
+    
+    dimensions:
+      - name: municipality_code
+        description: Municipality code
+        expr: municipality_code
+        data_type: VARCHAR
+        
+      - name: municipality_name
+        description: Municipality name
+        expr: municipality_name
+        data_type: VARCHAR
+        
+      - name: school_id
+        description: School identifier
+        expr: school_id
+        data_type: VARCHAR
+        
+      - name: school_name
+        description: School name
+        expr: school_name
+        data_type: VARCHAR
+        
+      - name: school_type
+        description: Type of school
+        expr: school_type
+        data_type: VARCHAR
+        
+      - name: academic_year
+        description: Academic year
+        expr: academic_year
+        data_type: VARCHAR
+    
+    measures:
+      - name: total_students_graded
+        description: Number of unique students with grades
+        expr: total_students_graded
+        data_type: NUMBER
+        default_aggregation: sum
+        
+      - name: total_grades
+        description: Total number of grades
+        expr: total_grades
+        data_type: NUMBER
+        default_aggregation: sum
+        
+      - name: avg_grade
+        description: Average grade at the school
+        expr: avg_grade
+        data_type: NUMBER
+        default_aggregation: avg
+        synonyms: ["gennemsnit", "average score"]
+        
+      - name: passing_rate_pct
+        description: Percentage of students passing
+        expr: passing_rate_pct
+        data_type: NUMBER
+        default_aggregation: avg
+        synonyms: ["beståelsesprocent"]
+
+relationships:
+  - name: grades_to_students
+    left_table: fact_grades
+    right_table: dim_students
+    relationship_type: many_to_one
+    join_type: left
+    relationship_columns:
+      - left_column: student_id
+        right_column: student_id
+
+  - name: grades_to_schools
+    left_table: fact_grades
+    right_table: dim_schools
+    relationship_type: many_to_one
+    join_type: left
+    relationship_columns:
+      - left_column: school_id
+        right_column: school_id
+
+  - name: students_to_schools
+    left_table: dim_students
+    right_table: dim_schools
+    relationship_type: many_to_one
+    join_type: left
+    relationship_columns:
+      - left_column: school_id
+        right_column: school_id
+
+verified_queries:
+  - name: average_grade_by_municipality
+    question: What is the average grade in each municipality?
+    verified_query: |
+      SELECT 
+        municipality_name,
+        ROUND(AVG(grade_numeric), 2) as avg_grade
+      FROM KMD_ANALYTICS.GOLD.FACT_GRADES g
+      JOIN KMD_ANALYTICS.GOLD.DIM_SCHOOLS s ON g.school_id = s.school_id
+      WHERE grade_numeric IS NOT NULL
+      GROUP BY municipality_name
+      ORDER BY avg_grade DESC
+    verified_at: "2024-01-15"
+    verified_by: "KMD Workshop"
+
+  - name: school_count_by_municipality
+    question: How many schools are in each municipality?
+    verified_query: |
+      SELECT 
+        municipality_name,
+        COUNT(*) as school_count
+      FROM KMD_ANALYTICS.GOLD.DIM_SCHOOLS
+      WHERE is_active = TRUE
+      GROUP BY municipality_name
+      ORDER BY school_count DESC
+    verified_at: "2024-01-15"
+    verified_by: "KMD Workshop"
+
+  - name: top_performing_schools
+    question: Which schools have the highest average grades?
+    verified_query: |
+      SELECT 
+        school_name,
+        municipality_name,
+        ROUND(avg_grade, 2) as avg_grade,
+        passing_rate_pct
+      FROM KMD_ANALYTICS.GOLD.AGG_SCHOOL_PERFORMANCE
+      ORDER BY avg_grade DESC
+      LIMIT 10
+    verified_at: "2024-01-15"
+    verified_by: "KMD Workshop"
+
+  - name: student_count_by_grade_level
+    question: How many students are in each grade level?
+    verified_query: |
+      SELECT 
+        grade,
+        COUNT(*) as student_count
+      FROM KMD_ANALYTICS.GOLD.DIM_STUDENTS
+      WHERE is_active = TRUE
+      GROUP BY grade
+      ORDER BY grade
+    verified_at: "2024-01-15"
+    verified_by: "KMD Workshop"
+
+  - name: subject_performance
+    question: What is the average grade by subject?
+    verified_query: |
+      SELECT 
+        subject,
+        subject_category,
+        ROUND(AVG(grade_numeric), 2) as avg_grade,
+        COUNT(*) as total_grades
+      FROM KMD_ANALYTICS.GOLD.FACT_GRADES
+      WHERE grade_numeric IS NOT NULL
+      GROUP BY subject, subject_category
+      ORDER BY avg_grade DESC
+    verified_at: "2024-01-15"
+    verified_by: "KMD Workshop"

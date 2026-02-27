@@ -2,69 +2,94 @@ version: 2
 
 models:
   - name: stg_schools
-    description: Staged schools data with basic cleaning
+    description: "Cleaned and deduplicated school records"
     columns:
       - name: school_id
-        description: Primary key for schools
+        description: "Primary key - unique school identifier"
         tests:
           - unique
           - not_null
       - name: municipality_code
-        description: Foreign key to municipalities
+        description: "Danish municipality code"
         tests:
           - not_null
       - name: school_name
         tests:
           - not_null
+      - name: school_type
+        tests:
+          - accepted_values:
+              values: ['Folkeskole', 'Friskole', 'Privatskole', 'Specialskole']
+      - name: is_active
+        tests:
+          - not_null
 
   - name: stg_teachers
-    description: Staged teachers data with masked PII
+    description: "Cleaned and deduplicated teacher records"
     columns:
       - name: teacher_id
-        description: Primary key for teachers
         tests:
           - unique
           - not_null
       - name: school_id
-        description: Foreign key to schools
         tests:
           - not_null
           - relationships:
               to: ref('stg_schools')
               field: school_id
+      - name: full_name
+        tests:
+          - not_null
 
   - name: stg_students
-    description: Staged students data with masked PII
+    description: "Cleaned and deduplicated student records"
     columns:
       - name: student_id
-        description: Primary key for students
         tests:
           - unique
           - not_null
       - name: school_id
-        description: Foreign key to schools
         tests:
           - not_null
+          - relationships:
+              to: ref('stg_schools')
+              field: school_id
+      - name: grade_level
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
   - name: stg_classes
-    description: Staged classes data
+    description: "Cleaned and deduplicated class records"
     columns:
       - name: class_id
-        description: Primary key for classes
         tests:
           - unique
+          - not_null
+      - name: school_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_schools')
+              field: school_id
+      - name: academic_year
+        tests:
           - not_null
 
   - name: stg_grades
-    description: Staged grades fact data
+    description: "Cleaned and deduplicated grade/mark records"
     columns:
-      - name: grade_record_id
-        description: Primary key for grade records
+      - name: grade_id
         tests:
           - unique
           - not_null
-      - name: grade_value
-        description: Grade on Danish 7-point scale
+      - name: student_id
         tests:
+          - not_null
+      - name: grade_value
+        description: "Danish 7-point scale: -3, 00, 02, 4, 7, 10, 12"
+        tests:
+          - not_null
           - accepted_values:
-              values: ['12', '10', '7', '4', '02', '00', '-3']
+              values: ['-3', '00', '02', '4', '7', '10', '12']

@@ -6,27 +6,27 @@
 }}
 
 with source as (
-    select * from {{ source('raw', 'students_raw') }}
+    select * from {{ source('raw', 'teachers_raw') }}
 ),
 
 cleaned as (
     select
-        student_id,
+        teacher_id,
         school_id,
-        class_id,
         trim(first_name) as first_name,
         trim(last_name) as last_name,
         trim(first_name) || ' ' || trim(last_name) as full_name,
         cpr_number,
-        birth_date,
-        enrollment_date,
-        grade_level,
+        lower(trim(email)) as email,
+        subject_specialty,
+        employment_type,
+        hire_date,
         coalesce(is_active, true) as is_active,
         _loaded_at,
         _source_file
     from source
-    where student_id is not null
-    qualify row_number() over (partition by student_id order by _loaded_at desc) = 1
+    where teacher_id is not null
+    qualify row_number() over (partition by teacher_id order by _loaded_at desc) = 1
 )
 
 select * from cleaned

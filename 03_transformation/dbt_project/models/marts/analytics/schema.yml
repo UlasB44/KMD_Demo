@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: fct_grades
+    description: "Fact table with individual grade records"
+    columns:
+      - name: grade_key
+        tests:
+          - unique
+          - not_null
+      - name: grade_id
+        tests:
+          - unique
+          - not_null
+      - name: grade_numeric
+        description: "Numeric version of Danish 7-point scale"
+        tests:
+          - not_null
+
+  - name: fct_grade_performance
+    description: "Aggregated grade performance by school/subject/term"
+    columns:
+      - name: avg_grade
+        description: "Average grade on Danish 7-point scale"
+      - name: passing_rate_pct
+        description: "Percentage of grades >= 7 (passing)"

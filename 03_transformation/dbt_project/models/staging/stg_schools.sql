@@ -1,6 +1,7 @@
 {{
     config(
-        materialized='view'
+        materialized='view',
+        schema='staging'
     )
 }}
 
@@ -14,11 +15,11 @@ cleaned as (
         municipality_code,
         trim(school_name) as school_name,
         school_type,
-        address,
+        trim(address) as address,
         postal_code,
-        city,
+        trim(city) as city,
         phone,
-        lower(email) as email,
+        lower(trim(email)) as email,
         founded_year,
         student_capacity,
         coalesce(is_active, true) as is_active,

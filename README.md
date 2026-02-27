@@ -8,30 +8,33 @@ This repository contains all materials for the KMD Snowflake Onboarding Workshop
 
 | Topic | Duration | Description |
 |-------|----------|-------------|
-| Data Integration | 2 hours | External stages, Snowpipe, Streams & Tasks |
+| Data Integration | 2.5 hours | External stages (S3), Snowpipe, Streams & Tasks, Schema Evolution |
 | Transformation | 2 hours | Data masking, Dynamic Tables, dbt |
-| AI & Reporting | 2.5 hours | Semantic Views, Cortex Analyst, Streamlit |
+| AI & Reporting | 2 hours | Semantic Views, Cortex Analyst, Streamlit |
 | Hands-on Labs | 1.5 hours | Guided exercises |
+
+**Total: ~8 hours (full day workshop)**
 
 ## Architecture
 
 ```
                     +------------------+
                     |   AWS S3 Bucket  |
-                    |  (CSV/Parquet)   |
+                    | s3://ubulut-iceberg-oregon/kmd/
                     +--------+---------+
                              |
                     +--------v---------+
-                    |  External Stage  |
+                    | Storage Integration
+                    |    (TRACKMAN)    |
                     +--------+---------+
                              |
               +--------------+--------------+
-              |                             |
-    +---------v----------+       +----------v---------+
-    |     Snowpipe       |       |   Manual COPY INTO |
-    | (Auto-ingest)      |       |   (Batch loads)    |
-    +---------+----------+       +----------+---------+
-              |                             |
+              |              |              |
+    +---------v----+ +-------v------+ +----v---------+
+    | COPENHAGEN   | | AARHUS       | | COMBINED     |
+    | _STAGE       | | _STAGE       | | _STAGE       |
+    +--------------+ +--------------+ +--------------+
+              |              |              |
               +--------------+--------------+
                              |
                     +--------v---------+
@@ -67,67 +70,89 @@ This repository contains all materials for the KMD Snowflake Onboarding Workshop
 +---------------+   +-----------------+  +--------------+
 ```
 
+## S3 Data Structure
+
+```
+s3://ubulut-iceberg-oregon/kmd/
+├── combined/                 # All municipalities combined (35 schools, 993 teachers, 14,614 students)
+│   ├── dim_schools_all.csv
+│   ├── dim_teachers_all.csv
+│   ├── dim_students_all.csv
+│   ├── dim_classes_all.csv
+│   ├── fact_budgets_all.csv
+│   ├── fact_wellness_all.csv
+│   └── fact_attendance_sample.csv
+├── copenhagen/               # Municipality-specific data
+├── aarhus/
+├── odense/
+├── aalborg/
+└── esbjerg/
+```
+
+## Snowflake Objects
+
+### External Stages (7 total)
+| Stage | S3 Path |
+|-------|---------|
+| KMD_S3_STAGE | s3://ubulut-iceberg-oregon/kmd/ (root) |
+| COPENHAGEN_STAGE | s3://ubulut-iceberg-oregon/kmd/copenhagen/ |
+| AARHUS_STAGE | s3://ubulut-iceberg-oregon/kmd/aarhus/ |
+| ODENSE_STAGE | s3://ubulut-iceberg-oregon/kmd/odense/ |
+| AALBORG_STAGE | s3://ubulut-iceberg-oregon/kmd/aalborg/ |
+| ESBJERG_STAGE | s3://ubulut-iceberg-oregon/kmd/esbjerg/ |
+| COMBINED_STAGE | s3://ubulut-iceberg-oregon/kmd/combined/ |
+
+### Databases
+- **KMD_SCHOOLS**: Multi-tenant school data (schema-per-tenant)
+- **KMD_STAGING**: Raw data landing zone and transformations
+- **KMD_ANALYTICS**: Gold layer analytics
+
 ## Multi-Tenant Architecture (Schema-per-Tenant)
 
 ```
 KMD_SCHOOLS (Database)
-├── COPENHAGEN (Schema)     - Municipality 1
-├── AARHUS (Schema)         - Municipality 2
-├── ODENSE (Schema)         - Municipality 3
-├── AALBORG (Schema)        - Municipality 4
-├── ESBJERG (Schema)        - Municipality 5
-├── SHARED (Schema)         - Shared reference data
-└── ANALYTICS (Schema)      - Cross-tenant analytics (with RLS)
+├── COPENHAGEN (Schema)     - Municipality 101
+├── AARHUS (Schema)         - Municipality 751
+├── ODENSE (Schema)         - Municipality 461
+├── AALBORG (Schema)        - Municipality 851
+├── ESBJERG (Schema)        - Municipality 561
+└── SHARED (Schema)         - Reference data & masking policies
 ```
-
-## Data Model - Schools Domain
-
-### Core Entities
-- **DIM_SCHOOLS**: School master data
-- **DIM_TEACHERS**: Teacher information
-- **DIM_STUDENTS**: Student data (CPR masked)
-- **DIM_CLASSES**: Class definitions
-
-### Academic Data
-- **FACT_GRADES**: Student grades
-- **FACT_ATTENDANCE**: Attendance records
-- **FACT_TEST_SCORES**: Standardized test results
-
-### Financial Data
-- **FACT_BUDGETS**: School budgets
-- **FACT_EXPENDITURES**: Spending records
-
-### Student Welfare
-- **FACT_WELLNESS**: Student wellness indicators
-- **DIM_SPECIAL_NEEDS**: Special education categories
 
 ## Repository Structure
 
 ```
 KMD_Demo/
 ├── 01_data_foundation/        # Synthetic data generation
-│   ├── data/                  # Generated CSV files
+│   ├── data/                  # Generated CSV files (by municipality)
+│   │   ├── combined/          # All data merged
+│   │   ├── copenhagen/
+│   │   ├── aarhus/
+│   │   └── ...
 │   └── scripts/               # Data generation scripts
 │
 ├── 02_data_integration/       # Ingestion patterns
-│   ├── external_stages/       # Stage definitions
+│   ├── external_stages/       # External stage definitions (S3)
 │   ├── snowpipe/              # Auto-ingest setup
-│   └── streams_tasks/         # CDC implementation
+│   ├── streams_tasks/         # CDC implementation
+│   └── schema_evolution/      # Schema evolution examples
 │
 ├── 03_transformation/         # Data transformation
-│   ├── masking_policies/      # Dynamic data masking
+│   ├── masking_policies/      # Dynamic data masking (CPR, email)
 │   ├── dynamic_tables/        # Dynamic table definitions
-│   └── dbt_project/           # dbt models
+│   └── dbt_project/           # Complete dbt project
+│       ├── models/
+│       │   ├── staging/       # stg_schools, stg_teachers, etc.
+│       │   ├── intermediate/  # int_* models
+│       │   └── marts/         # dim_*, fct_* tables
+│       └── seeds/             # Reference data
 │
 ├── 04_ai_reporting/           # AI & Analytics
 │   ├── semantic_views/        # Cortex Analyst models
-│   ├── cortex_agents/         # Agent definitions
 │   └── streamlit_apps/        # Dashboard apps
 │
 └── 05_training_materials/     # Workshop content
-    ├── slides/                # Presentation deck
-    ├── hol_guides/            # Hands-on lab guides
-    └── architecture_diagrams/ # Visual documentation
+    └── hol_guides/            # Hands-on lab guides
 ```
 
 ## Quick Start
@@ -135,37 +160,51 @@ KMD_Demo/
 ### 1. Setup Database Structure
 ```sql
 -- Run the setup script
+USE ROLE SYSADMIN;
 !source 01_data_foundation/scripts/00_setup_databases.sql
 ```
 
-### 2. Generate Sample Data
-```bash
-cd 01_data_foundation/scripts
-python generate_school_data.py
-```
-
-### 3. Upload to S3 and Create Stages
+### 2. Create External Stages (uses existing TRACKMAN integration)
 ```sql
 !source 02_data_integration/external_stages/create_stages.sql
 ```
 
+### 3. Load Data from S3
+```sql
+-- Load from external stage
+COPY INTO KMD_STAGING.RAW.SCHOOLS_RAW
+FROM @KMD_STAGING.EXTERNAL_STAGES.COMBINED_STAGE/dim_schools_all.csv
+FILE_FORMAT = CSV_FORMAT;
+```
+
 ### 4. Run the Workshop Labs
-Follow the guides in `05_training_materials/hol_guides/`
+Follow the guides in `05_training_materials/hol_guides/Workshop_Lab_Guide.md`
+
+## Data Summary
+
+| Entity | Count |
+|--------|-------|
+| Schools | 35 |
+| Teachers | 993 |
+| Students | 14,614 |
+| Classes | 699 |
+| Municipalities | 5 |
 
 ## Prerequisites
 
-- Snowflake Account with ACCOUNTADMIN or SYSADMIN role
-- AWS S3 bucket access (for external stages)
-- Python 3.9+ (for data generation)
+- Snowflake Account with SYSADMIN role
+- Storage Integration `TRACKMAN` (already configured)
 - dbt-snowflake (for transformation demos)
 
-## Security Features Demonstrated
+## Key Features Demonstrated
 
-- Dynamic Data Masking (CPR numbers)
-- Row-Level Security (tenant isolation)
-- Role-Based Access Control (RBAC)
-- Column-Level Security
-- Audit logging
+- **External Stages**: S3 integration with storage integration
+- **Schema Evolution**: Auto-add columns, handle missing columns
+- **Dynamic Data Masking**: CPR numbers, emails (role-based)
+- **Streams & Tasks**: CDC for incremental processing
+- **Dynamic Tables**: Auto-refresh materialized views
+- **dbt**: Full project with staging → intermediate → marts
+- **Cortex Analyst**: Natural language to SQL
 
 ## License
 

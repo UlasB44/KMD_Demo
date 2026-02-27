@@ -4,19 +4,86 @@ sources:
   - name: raw
     database: KMD_STAGING
     schema: RAW
+    description: "Raw landing zone for incoming school data"
     tables:
       - name: schools_raw
+        description: "Raw school data from CSV files"
+        columns:
+          - name: school_id
+            description: "Unique school identifier (format: XXX-SCH-NNN)"
+          - name: municipality_code
+            description: "Danish municipality code"
+          - name: school_name
+          - name: school_type
+          - name: address
+          - name: postal_code
+          - name: city
+          - name: phone
+          - name: email
+          - name: founded_year
+          - name: student_capacity
+          - name: is_active
+          - name: created_at
+          - name: updated_at
+          - name: _loaded_at
+          - name: _source_file
+      
       - name: teachers_raw
+        description: "Raw teacher data from CSV files"
+        columns:
+          - name: teacher_id
+          - name: school_id
+          - name: first_name
+          - name: last_name
+          - name: cpr_number
+          - name: email
+          - name: subject_specialty
+          - name: employment_type
+          - name: hire_date
+          - name: is_active
+          - name: _loaded_at
+          - name: _source_file
+      
       - name: students_raw
+        description: "Raw student data from CSV files"
+        columns:
+          - name: student_id
+          - name: school_id
+          - name: class_id
+          - name: first_name
+          - name: last_name
+          - name: cpr_number
+          - name: birth_date
+          - name: enrollment_date
+          - name: grade_level
+          - name: is_active
+          - name: _loaded_at
+          - name: _source_file
+      
       - name: classes_raw
+        description: "Raw class data from CSV files"
+        columns:
+          - name: class_id
+          - name: school_id
+          - name: class_name
+          - name: grade_level
+          - name: academic_year
+          - name: teacher_id
+          - name: room_number
+          - name: max_students
+          - name: _loaded_at
+          - name: _source_file
+      
       - name: grades_raw
-      - name: budgets_raw
-
-  - name: shared
-    database: KMD_SCHOOLS
-    schema: SHARED
-    tables:
-      - name: dim_municipalities
-      - name: dim_grade_scale
-      - name: dim_subjects
-      - name: dim_special_needs
+        description: "Raw grade/marks data from CSV files"
+        columns:
+          - name: grade_id
+          - name: student_id
+          - name: class_id
+          - name: subject
+          - name: grade_value
+          - name: grade_date
+          - name: term
+          - name: teacher_id
+          - name: _loaded_at
+          - name: _source_file

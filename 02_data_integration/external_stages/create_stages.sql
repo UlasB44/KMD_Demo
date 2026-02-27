@@ -2,125 +2,123 @@
 =============================================================================
 KMD Denmark - External Stage Setup
 Creates S3 external stages for data ingestion from AWS
+Uses existing TRACKMAN storage integration
 =============================================================================
 */
 
 USE ROLE SYSADMIN;
 USE DATABASE KMD_STAGING;
+CREATE SCHEMA IF NOT EXISTS EXTERNAL_STAGES;
 USE SCHEMA EXTERNAL_STAGES;
 USE WAREHOUSE KMD_WH;
 
 -- ============================================================================
--- SECTION 1: Create Storage Integration (requires ACCOUNTADMIN)
+-- SECTION 1: File Formats
 -- ============================================================================
 
--- Note: Run this section with ACCOUNTADMIN role
--- This creates a trust relationship between Snowflake and AWS S3
+-- Standard CSV format for data loading
+CREATE OR REPLACE FILE FORMAT CSV_FORMAT
+    TYPE = 'CSV'
+    FIELD_DELIMITER = ','
+    SKIP_HEADER = 1
+    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+    NULL_IF = ('NULL', 'null', '')
+    TRIM_SPACE = TRUE;
 
-USE ROLE ACCOUNTADMIN;
-
-CREATE OR REPLACE STORAGE INTEGRATION KMD_S3_INTEGRATION
-    TYPE = EXTERNAL_STAGE
-    STORAGE_PROVIDER = 'S3'
-    ENABLED = TRUE
-    STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::<YOUR_AWS_ACCOUNT>:role/snowflake-s3-role'
-    STORAGE_ALLOWED_LOCATIONS = ('s3://ubulut-iceberg-oregon/kmd/')
-    COMMENT = 'S3 integration for KMD school data';
-
--- Get the AWS IAM user ARN and External ID for trust policy setup
-DESC STORAGE INTEGRATION KMD_S3_INTEGRATION;
-
--- Grant usage to SYSADMIN
-GRANT USAGE ON INTEGRATION KMD_S3_INTEGRATION TO ROLE SYSADMIN;
+-- CSV format with schema evolution support
+CREATE OR REPLACE FILE FORMAT CSV_SCHEMA_EVOLUTION
+    TYPE = 'CSV'
+    FIELD_DELIMITER = ','
+    PARSE_HEADER = TRUE
+    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+    NULL_IF = ('NULL', 'null', '')
+    ERROR_ON_COLUMN_COUNT_MISMATCH = FALSE;
 
 -- ============================================================================
--- SECTION 2: Create External Stages
+-- SECTION 2: External Stages (using TRACKMAN storage integration)
 -- ============================================================================
+-- Note: TRACKMAN integration already exists and covers s3://ubulut-iceberg-oregon/
 
-USE ROLE SYSADMIN;
-USE DATABASE KMD_STAGING;
-USE SCHEMA EXTERNAL_STAGES;
-
--- Main external stage for all school data
+-- Main external stage for all KMD data (root)
 CREATE OR REPLACE STAGE KMD_S3_STAGE
+    STORAGE_INTEGRATION = TRACKMAN
     URL = 's3://ubulut-iceberg-oregon/kmd/'
-    STORAGE_INTEGRATION = KMD_S3_INTEGRATION
     FILE_FORMAT = CSV_FORMAT
-    COMMENT = 'External stage for KMD school data from S3';
+    COMMENT = 'Root external stage for all KMD school data';
 
--- Alternative: Stage with direct credentials (for demo without integration)
--- Use this if storage integration is not set up
-CREATE OR REPLACE STAGE KMD_S3_STAGE_DEMO
-    URL = 's3://ubulut-iceberg-oregon/kmd/'
-    CREDENTIALS = (
-        AWS_KEY_ID = '${AWS_ACCESS_KEY_ID}'
-        AWS_SECRET_KEY = '${AWS_SECRET_ACCESS_KEY}'
-    )
-    FILE_FORMAT = CSV_FORMAT
-    COMMENT = 'External stage with direct credentials (demo only)';
-
--- ============================================================================
--- SECTION 3: Create Internal Stages for Local Testing
--- ============================================================================
-
--- Internal stage for each municipality (for workshop exercises)
+-- Municipality-specific external stages
 CREATE OR REPLACE STAGE COPENHAGEN_STAGE
+    STORAGE_INTEGRATION = TRACKMAN
+    URL = 's3://ubulut-iceberg-oregon/kmd/copenhagen/'
     FILE_FORMAT = CSV_FORMAT
-    COMMENT = 'Internal stage for Copenhagen municipality data';
+    COMMENT = 'External stage for Copenhagen municipality data';
 
 CREATE OR REPLACE STAGE AARHUS_STAGE
+    STORAGE_INTEGRATION = TRACKMAN
+    URL = 's3://ubulut-iceberg-oregon/kmd/aarhus/'
     FILE_FORMAT = CSV_FORMAT
-    COMMENT = 'Internal stage for Aarhus municipality data';
+    COMMENT = 'External stage for Aarhus municipality data';
 
 CREATE OR REPLACE STAGE ODENSE_STAGE
+    STORAGE_INTEGRATION = TRACKMAN
+    URL = 's3://ubulut-iceberg-oregon/kmd/odense/'
     FILE_FORMAT = CSV_FORMAT
-    COMMENT = 'Internal stage for Odense municipality data';
+    COMMENT = 'External stage for Odense municipality data';
 
 CREATE OR REPLACE STAGE AALBORG_STAGE
+    STORAGE_INTEGRATION = TRACKMAN
+    URL = 's3://ubulut-iceberg-oregon/kmd/aalborg/'
     FILE_FORMAT = CSV_FORMAT
-    COMMENT = 'Internal stage for Aalborg municipality data';
+    COMMENT = 'External stage for Aalborg municipality data';
 
 CREATE OR REPLACE STAGE ESBJERG_STAGE
+    STORAGE_INTEGRATION = TRACKMAN
+    URL = 's3://ubulut-iceberg-oregon/kmd/esbjerg/'
     FILE_FORMAT = CSV_FORMAT
-    COMMENT = 'Internal stage for Esbjerg municipality data';
+    COMMENT = 'External stage for Esbjerg municipality data';
 
--- Combined data stage
+-- Combined data stage (all municipalities)
 CREATE OR REPLACE STAGE COMBINED_STAGE
+    STORAGE_INTEGRATION = TRACKMAN
+    URL = 's3://ubulut-iceberg-oregon/kmd/combined/'
     FILE_FORMAT = CSV_FORMAT
-    COMMENT = 'Internal stage for combined/all municipality data';
+    COMMENT = 'External stage for combined municipality data';
 
 -- ============================================================================
--- SECTION 4: List Stage Contents (for verification)
+-- SECTION 3: Verify Stage Setup
 -- ============================================================================
 
--- List files in external stage
--- LIST @KMD_S3_STAGE;
+-- List all stages
+SHOW STAGES IN SCHEMA KMD_STAGING.EXTERNAL_STAGES;
 
--- List files in internal stages
--- LIST @COPENHAGEN_STAGE;
+-- Verify S3 connectivity
+LIST @KMD_S3_STAGE;
+LIST @COMBINED_STAGE;
+LIST @COPENHAGEN_STAGE;
 
 -- ============================================================================
--- SECTION 5: Stage Usage Examples
+-- SECTION 4: Usage Examples
 -- ============================================================================
 
 /*
--- Upload files to internal stage using SnowSQL or Snowsight:
-PUT file:///path/to/data/copenhagen/dim_schools.csv @COPENHAGEN_STAGE/schools/;
-PUT file:///path/to/data/copenhagen/dim_students.csv @COPENHAGEN_STAGE/students/;
-
--- Or from Python using snowflake-connector-python:
-import snowflake.connector
-conn = snowflake.connector.connect(...)
-cursor = conn.cursor()
-cursor.execute("PUT file://./data/copenhagen/*.csv @COPENHAGEN_STAGE AUTO_COMPRESS=TRUE")
-
--- Copy data from stage to table:
+-- Load schools from combined stage:
 COPY INTO KMD_STAGING.RAW.SCHOOLS_RAW
-FROM @COPENHAGEN_STAGE/schools/
+FROM @COMBINED_STAGE/dim_schools_all.csv
 FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- Load Copenhagen-specific data:
+COPY INTO KMD_STAGING.RAW.SCHOOLS_RAW
+FROM @COPENHAGEN_STAGE/dim_schools.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- Load with schema evolution (auto-add new columns):
+COPY INTO KMD_STAGING.RAW.SCHOOLS_EVOLUTION
+FROM @COMBINED_STAGE/dim_schools_all.csv
+FILE_FORMAT = CSV_SCHEMA_EVOLUTION
+MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
 ON_ERROR = 'CONTINUE';
 */
 
 SELECT 'External stages created successfully!' AS status;
-
-SHOW STAGES IN SCHEMA KMD_STAGING.EXTERNAL_STAGES;

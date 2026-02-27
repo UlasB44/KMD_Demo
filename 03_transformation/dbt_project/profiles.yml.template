@@ -1,0 +1,17 @@
+# TEMPLATE: Copy this to ~/.dbt/profiles.yml and fill in your credentials
+# DO NOT commit actual credentials to git!
+
+kmd_snowflake:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: <your_account>  # e.g., xy12345.us-west-2
+      user: <your_user>
+      password: <your_password>  # Or use authenticator: externalbrowser
+      role: SYSADMIN
+      warehouse: KMD_WH
+      database: KMD_STAGING
+      schema: RAW
+      threads: 4
+      client_session_keep_alive: False

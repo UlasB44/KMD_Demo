@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: dim_schools
+    description: "School dimension with student and teacher counts"
+    columns:
+      - name: school_key
+        description: "Surrogate key"
+        tests:
+          - unique
+          - not_null
+      - name: school_id
+        tests:
+          - unique
+          - not_null
+      - name: capacity_utilization_pct
+        description: "Percentage of student capacity utilized"
+
+  - name: dim_students
+    description: "Student dimension with grade performance"
+    columns:
+      - name: student_key
+        tests:
+          - unique
+          - not_null
+      - name: student_id
+        tests:
+          - unique
+          - not_null
+      - name: performance_category
+        description: "Calculated performance tier based on avg_grade"
+        tests:
+          - accepted_values:
+              values: ['Excellent', 'Good', 'Average', 'Below Average', 'Needs Improvement']
+
+  - name: dim_teachers
+    description: "Teacher dimension with school information"
+    columns:
+      - name: teacher_key
+        tests:
+          - unique
+          - not_null
+      - name: teacher_id
+        tests:
+          - unique
+          - not_null

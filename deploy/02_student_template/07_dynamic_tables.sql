@@ -39,7 +39,7 @@ SELECT
     COUNT(DISTINCT s.student_id) AS student_count,
     COUNT(DISTINCT CASE WHEN s.gender = 'M' THEN s.student_id END) AS male_count,
     COUNT(DISTINCT CASE WHEN s.gender = 'F' THEN s.student_id END) AS female_count,
-    COUNT(DISTINCT CASE WHEN s.special_needs != 'None' THEN s.student_id END) AS special_needs_count,
+    COUNT(DISTINCT CASE WHEN s.special_needs NOT IN ('None', 'Ingen') THEN s.student_id END) AS special_needs_count,
     ROUND(AVG(DATEDIFF('year', s.birth_date, CURRENT_DATE())), 1) AS avg_age
 FROM {MUNICIPALITY}_DB.CLEAN.STUDENTS s
 JOIN {MUNICIPALITY}_DB.CLEAN.CLASSES c ON s.class_id = c.class_id
@@ -123,8 +123,8 @@ SELECT
     COUNT(DISTINCT t.teacher_id) AS total_teachers,
     COUNT(DISTINCT c.class_id) AS total_classes,
     ROUND(COUNT(DISTINCT s.student_id) * 1.0 / NULLIF(COUNT(DISTINCT t.teacher_id), 0), 1) AS student_teacher_ratio,
-    COUNT(DISTINCT CASE WHEN s.special_needs != 'None' THEN s.student_id END) AS special_needs_students,
-    ROUND(COUNT(DISTINCT CASE WHEN s.special_needs != 'None' THEN s.student_id END) * 100.0 
+    COUNT(DISTINCT CASE WHEN s.special_needs NOT IN ('None', 'Ingen') THEN s.student_id END) AS special_needs_students,
+    ROUND(COUNT(DISTINCT CASE WHEN s.special_needs NOT IN ('None', 'Ingen') THEN s.student_id END) * 100.0 
           / NULLIF(COUNT(DISTINCT s.student_id), 0), 1) AS special_needs_pct,
     SUM(c.max_students) AS total_capacity,
     ROUND(COUNT(DISTINCT s.student_id) * 100.0 / NULLIF(SUM(c.max_students), 0), 1) AS capacity_utilization_pct,

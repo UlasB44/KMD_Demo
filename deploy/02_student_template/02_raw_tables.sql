@@ -11,24 +11,15 @@ USE DATABASE {MUNICIPALITY}_DB;
 USE WAREHOUSE KMD_WH;
 
 -- ============================================================================
--- FILE FORMAT (Each student creates their own)
+-- EXTERNAL STAGE (points to your municipality's S3 folder)
+-- Uses shared file format from KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT
 -- ============================================================================
 USE SCHEMA RAW;
-
-CREATE OR REPLACE FILE FORMAT CSV_FORMAT
-    TYPE = 'CSV'
-    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
-    SKIP_HEADER = 1
-    NULL_IF = ('NULL', 'null', '');
-
--- ============================================================================
--- EXTERNAL STAGE (points to your municipality's S3 folder)
--- ============================================================================
 
 CREATE OR REPLACE STAGE {MUNICIPALITY}_STAGE
     STORAGE_INTEGRATION = KMD_S3_INTEGRATION
     URL = 's3://ubulut-iceberg-oregon/data/{municipality}/'
-    FILE_FORMAT = (FORMAT_NAME = 'CSV_FORMAT');
+    FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT');
 
 -- Verify stage contents
 LIST @{MUNICIPALITY}_STAGE;

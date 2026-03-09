@@ -11,7 +11,7 @@ USE WAREHOUSE KMD_WH;
 -- ============================================================================
 -- TEST 1: COLUMN RENAMED (first_name → frist_name)
 -- ============================================================================
--- File: 01_column_renamed_ERROR.csv
+-- File: dim_students_COLUMN_RENAMED.csv
 -- 
 -- WHAT HAPPENS:
 --   Snowpipe uses POSITIONAL mapping by default, NOT column names!
@@ -23,7 +23,7 @@ USE WAREHOUSE KMD_WH;
 -- ============================================================================
 
 -- Upload file to S3:
--- aws s3 cp 01_column_renamed_ERROR.csv s3://ubulut-iceberg-oregon/data/esbjerg/
+-- aws s3 cp dim_students_COLUMN_RENAMED.csv s3://ubulut-iceberg-oregon/data/esbjerg/
 
 -- Check if it loaded (it will succeed!)
 SELECT FILE_NAME, STATUS, ROW_COUNT, FIRST_ERROR_MESSAGE
@@ -57,7 +57,7 @@ CREATE OR REPLACE FILE FORMAT CSV_FORMAT_BY_NAME
 -- ============================================================================
 -- TEST 2: DATATYPE MISMATCH (municipality_code: INTEGER gets VARCHAR)
 -- ============================================================================
--- File: 02_datatype_mismatch_ERROR.csv
+-- File: dim_students_DATATYPE_ERROR.csv
 -- 
 -- WHAT HAPPENS:
 --   Snowpipe tries to cast 'THIS_IS_NOT_AN_INTEGER' to INTEGER
@@ -67,7 +67,7 @@ CREATE OR REPLACE FILE FORMAT CSV_FORMAT_BY_NAME
 -- ============================================================================
 
 -- Upload file to S3:
--- aws s3 cp 02_datatype_mismatch_ERROR.csv s3://ubulut-iceberg-oregon/data/esbjerg/
+-- aws s3 cp dim_students_DATATYPE_ERROR.csv s3://ubulut-iceberg-oregon/data/esbjerg/
 
 -- Check copy history - will show LOAD_FAILED
 SELECT FILE_NAME, STATUS, ROW_COUNT, ERROR_COUNT, FIRST_ERROR_MESSAGE
@@ -141,7 +141,7 @@ FROM RAW.STUDENTS_RAW_VARIANT;
 
 /*
 COPY INTO RAW.STUDENTS_RAW
-FROM @RAW.ESBJERG_STAGE/02_datatype_mismatch_ERROR.csv
+FROM @RAW.ESBJERG_STAGE/dim_students_DATATYPE_ERROR.csv
 FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT')
 VALIDATION_MODE = 'RETURN_ERRORS';
 */

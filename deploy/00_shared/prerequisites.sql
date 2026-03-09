@@ -3,9 +3,9 @@
 -- ============================================================================
 -- Run ONCE per Snowflake account. Creates:
 --   - Storage Integration for S3 access
---   - Shared file formats
 --   - Warehouse
 --
+-- File format already exists at: KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT
 -- After running, configure S3 trust relationship with the IAM role ARN
 -- ============================================================================
 
@@ -33,28 +33,11 @@ CREATE OR REPLACE STORAGE INTEGRATION KMD_S3_INTEGRATION
 DESC INTEGRATION KMD_S3_INTEGRATION;
 
 -- ============================================================================
--- SHARED DATABASE FOR FILE FORMATS
+-- GRANT USAGE TO PUBLIC (so all students can use shared resources)
 -- ============================================================================
-CREATE DATABASE IF NOT EXISTS KMD_SHARED;
-CREATE SCHEMA IF NOT EXISTS KMD_SHARED.FORMATS;
-
-USE SCHEMA KMD_SHARED.FORMATS;
-
-CREATE OR REPLACE FILE FORMAT CSV_FORMAT
-    TYPE = 'CSV'
-    FIELD_DELIMITER = ','
-    SKIP_HEADER = 1
-    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
-    NULL_IF = ('NULL', 'null', '')
-    EMPTY_FIELD_AS_NULL = TRUE
-    TRIM_SPACE = TRUE;
-
--- ============================================================================
--- GRANT USAGE TO PUBLIC (so all students can use)
--- ============================================================================
-GRANT USAGE ON DATABASE KMD_SHARED TO ROLE PUBLIC;
-GRANT USAGE ON SCHEMA KMD_SHARED.FORMATS TO ROLE PUBLIC;
-GRANT USAGE ON FILE FORMAT KMD_SHARED.FORMATS.CSV_FORMAT TO ROLE PUBLIC;
+GRANT USAGE ON DATABASE KMD_STAGING TO ROLE PUBLIC;
+GRANT USAGE ON SCHEMA KMD_STAGING.EXTERNAL_STAGES TO ROLE PUBLIC;
+GRANT USAGE ON FILE FORMAT KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT TO ROLE PUBLIC;
 GRANT USAGE ON INTEGRATION KMD_S3_INTEGRATION TO ROLE PUBLIC;
 GRANT USAGE ON WAREHOUSE KMD_WH TO ROLE PUBLIC;
 
@@ -62,4 +45,4 @@ GRANT USAGE ON WAREHOUSE KMD_WH TO ROLE PUBLIC;
 -- VERIFICATION
 -- ============================================================================
 SHOW INTEGRATIONS LIKE 'KMD%';
-SHOW FILE FORMATS IN SCHEMA KMD_SHARED.FORMATS;
+SHOW FILE FORMATS IN SCHEMA KMD_STAGING.EXTERNAL_STAGES;

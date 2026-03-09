@@ -1,0 +1,27 @@
+name: 'kmd_municipality'
+version: '1.0.0'
+config-version: 2
+
+profile: 'kmd_municipality'
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+analysis-paths: ["analysis"]
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  municipality: "ESBJERG"
+  municipality_code: 561
+  municipality_name: "Esbjerg"
+
+models:
+  kmd_municipality:
+    analytics:
+      +schema: ANALYTICS
+      +materialized: table

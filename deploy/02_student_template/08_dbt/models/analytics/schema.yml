@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: students_by_grade
+    description: "Aggregates student counts and demographics per grade level"
+    columns:
+      - name: grade
+        description: "Grade level (0-9)"
+      - name: student_count
+        description: "Total students in this grade"
+        tests:
+          - not_null
+      - name: avg_age
+        description: "Average age of students in this grade"
+
+  - name: class_enrollment
+    description: "Shows enrollment vs capacity per class"
+    columns:
+      - name: class_id
+        description: "Unique class identifier"
+        tests:
+          - unique
+          - not_null
+      - name: enrollment_pct
+        description: "Percentage of capacity filled"
+      - name: enrollment_status
+        description: "FULL, NEARLY FULL, MODERATE, or LOW"
+        tests:
+          - accepted_values:
+              values: ['FULL', 'NEARLY FULL', 'MODERATE', 'LOW']
+
+  - name: teacher_workload
+    description: "Calculates student-to-teacher metrics"
+    columns:
+      - name: teacher_id
+        description: "Unique teacher identifier"
+        tests:
+          - unique
+          - not_null
+      - name: workload_level
+        description: "HIGH, MODERATE, or LOW based on student count"
+        tests:
+          - accepted_values:
+              values: ['HIGH', 'MODERATE', 'LOW']
+
+  - name: municipality_overview
+    description: "High-level KPIs for the municipality"
+    columns:
+      - name: municipality_code
+        description: "Danish municipality code"
+        tests:
+          - not_null
+      - name: total_students
+        description: "Total active students"
+      - name: student_teacher_ratio
+        description: "Students per teacher ratio"

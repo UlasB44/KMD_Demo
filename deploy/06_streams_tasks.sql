@@ -2,7 +2,10 @@
 -- KMD WORKSHOP - STEP 6: SNOWPIPE + STREAMS & TASKS (Complete CDC Pipeline)
 -- ============================================================================
 -- Creates the COMPLETE automated pipeline:
---   S3 → Snowpipe → RAW → Stream → Task → CLEAN
+--   S3 → Snowpipe (PATTERN matching) → RAW → Stream → Task → CLEAN
+-- 
+-- PATTERN matching allows multiple dated files:
+--   dim_students_20260310.csv, dim_students_20260311.csv, etc.
 -- ============================================================================
 
 USE ROLE ACCOUNTADMIN;
@@ -10,43 +13,46 @@ USE DATABASE KMD_STAGING;
 USE WAREHOUSE KMD_WH;
 
 -- ============================================================================
--- SNOWPIPES (Auto-ingest from S3)
+-- SNOWPIPES (Auto-ingest from S3 with PATTERN matching)
 -- ============================================================================
 -- These pipes automatically load data when new files arrive in S3
--- Requires S3 event notification pointing to the SQS queue shown in SHOW PIPES
+-- PATTERN allows dated filenames: dim_students_YYYYMMDD.csv
 
 USE SCHEMA RAW;
-
-CREATE OR REPLACE PIPE SCHOOLS_PIPE
-    AUTO_INGEST = TRUE
-AS
-COPY INTO SCHOOLS_RAW
-FROM @KMD_STAGING.EXTERNAL_STAGES.COMBINED_STAGE/dim_schools_all.csv
-FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT');
-
-CREATE OR REPLACE PIPE TEACHERS_PIPE
-    AUTO_INGEST = TRUE
-AS
-COPY INTO TEACHERS_RAW
-FROM @KMD_STAGING.EXTERNAL_STAGES.COMBINED_STAGE/dim_teachers_all.csv
-FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT');
 
 CREATE OR REPLACE PIPE STUDENTS_PIPE
     AUTO_INGEST = TRUE
 AS
 COPY INTO STUDENTS_RAW
-FROM @KMD_STAGING.EXTERNAL_STAGES.COMBINED_STAGE/dim_students_all.csv
-FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT');
+FROM @EXTERNAL_STAGES.COMBINED_STAGE/
+PATTERN = '.*dim_students.*\.csv'
+FILE_FORMAT = (FORMAT_NAME = 'EXTERNAL_STAGES.CSV_FORMAT');
+
+CREATE OR REPLACE PIPE TEACHERS_PIPE
+    AUTO_INGEST = TRUE
+AS
+COPY INTO TEACHERS_RAW
+FROM @EXTERNAL_STAGES.COMBINED_STAGE/
+PATTERN = '.*dim_teachers.*\.csv'
+FILE_FORMAT = (FORMAT_NAME = 'EXTERNAL_STAGES.CSV_FORMAT');
 
 CREATE OR REPLACE PIPE CLASSES_PIPE
     AUTO_INGEST = TRUE
 AS
 COPY INTO CLASSES_RAW
-FROM @KMD_STAGING.EXTERNAL_STAGES.COMBINED_STAGE/dim_classes_all.csv
-FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT');
+FROM @EXTERNAL_STAGES.COMBINED_STAGE/
+PATTERN = '.*dim_classes.*\.csv'
+FILE_FORMAT = (FORMAT_NAME = 'EXTERNAL_STAGES.CSV_FORMAT');
+
+CREATE OR REPLACE PIPE SCHOOLS_PIPE
+    AUTO_INGEST = TRUE
+AS
+COPY INTO SCHOOLS_RAW
+FROM @EXTERNAL_STAGES.COMBINED_STAGE/
+PATTERN = '.*dim_schools.*\.csv'
+FILE_FORMAT = (FORMAT_NAME = 'EXTERNAL_STAGES.CSV_FORMAT');
 
 -- Get the SQS ARN for S3 event notification setup
--- Add this ARN to your S3 bucket's event notification configuration
 SHOW PIPES IN SCHEMA KMD_STAGING.RAW;
 
 -- ============================================================================
@@ -54,7 +60,7 @@ SHOW PIPES IN SCHEMA KMD_STAGING.RAW;
 -- ============================================================================
 USE SCHEMA CLEAN;
 
-CREATE OR REPLACE TABLE SCHOOLS (
+CREATE TABLE IF NOT EXISTS SCHOOLS (
     school_id VARCHAR PRIMARY KEY,
     municipality_code INTEGER,
     school_name VARCHAR,
@@ -70,7 +76,7 @@ CREATE OR REPLACE TABLE SCHOOLS (
     loaded_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 );
 
-CREATE OR REPLACE TABLE TEACHERS (
+CREATE TABLE IF NOT EXISTS TEACHERS (
     teacher_id VARCHAR PRIMARY KEY,
     school_id VARCHAR,
     municipality_code INTEGER,
@@ -88,7 +94,7 @@ CREATE OR REPLACE TABLE TEACHERS (
     loaded_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 );
 
-CREATE OR REPLACE TABLE STUDENTS (
+CREATE TABLE IF NOT EXISTS STUDENTS (
     student_id VARCHAR PRIMARY KEY,
     class_id VARCHAR,
     school_id VARCHAR,
@@ -109,7 +115,7 @@ CREATE OR REPLACE TABLE STUDENTS (
     loaded_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 );
 
-CREATE OR REPLACE TABLE CLASSES (
+CREATE TABLE IF NOT EXISTS CLASSES (
     class_id VARCHAR PRIMARY KEY,
     school_id VARCHAR,
     municipality_code INTEGER,
@@ -134,8 +140,12 @@ CREATE OR REPLACE STREAM STUDENTS_STREAM ON TABLE KMD_STAGING.RAW.STUDENTS_RAW;
 CREATE OR REPLACE STREAM CLASSES_STREAM ON TABLE KMD_STAGING.RAW.CLASSES_RAW;
 
 -- ============================================================================
--- TASKS (Process stream data into CLEAN tables)
+-- TASKS (Process stream data into CLEAN tables via MERGE)
 -- ============================================================================
+-- MERGE ensures:
+--   - New records are INSERTED
+--   - Existing records are UPDATED (by primary key)
+--   - No duplicates in CLEAN layer
 
 CREATE OR REPLACE TASK PROCESS_SCHOOLS_TASK
     WAREHOUSE = KMD_WH
@@ -143,9 +153,8 @@ CREATE OR REPLACE TASK PROCESS_SCHOOLS_TASK
     WHEN SYSTEM$STREAM_HAS_DATA('SCHOOLS_STREAM')
 AS
 MERGE INTO KMD_STAGING.CLEAN.SCHOOLS t
-USING (SELECT * FROM SCHOOLS_STREAM) s
+USING (SELECT * FROM SCHOOLS_STREAM WHERE METADATA$ACTION = 'INSERT') s
 ON t.school_id = s.school_id
-WHEN MATCHED AND s.METADATA$ACTION = 'DELETE' THEN DELETE
 WHEN MATCHED THEN UPDATE SET 
     t.municipality_code = s.municipality_code, t.school_name = s.school_name, t.school_type = s.school_type,
     t.address = s.address, t.postal_code = s.postal_code, t.city = s.city, t.phone = s.phone, t.email = s.email,
@@ -160,9 +169,8 @@ CREATE OR REPLACE TASK PROCESS_TEACHERS_TASK
     WHEN SYSTEM$STREAM_HAS_DATA('TEACHERS_STREAM')
 AS
 MERGE INTO KMD_STAGING.CLEAN.TEACHERS t
-USING (SELECT *, CONCAT(first_name, ' ', last_name) as full_name FROM TEACHERS_STREAM) s
+USING (SELECT *, CONCAT(first_name, ' ', last_name) as full_name FROM TEACHERS_STREAM WHERE METADATA$ACTION = 'INSERT') s
 ON t.teacher_id = s.teacher_id
-WHEN MATCHED AND s.METADATA$ACTION = 'DELETE' THEN DELETE
 WHEN MATCHED THEN UPDATE SET 
     t.school_id = s.school_id, t.municipality_code = s.municipality_code, t.first_name = s.first_name, t.last_name = s.last_name,
     t.full_name = s.full_name, t.gender = s.gender, t.birth_date = s.birth_date, t.email = s.email, t.phone = s.phone,
@@ -177,9 +185,8 @@ CREATE OR REPLACE TASK PROCESS_STUDENTS_TASK
     WHEN SYSTEM$STREAM_HAS_DATA('STUDENTS_STREAM')
 AS
 MERGE INTO KMD_STAGING.CLEAN.STUDENTS t
-USING (SELECT *, CONCAT(first_name, ' ', last_name) as full_name FROM STUDENTS_STREAM) s
+USING (SELECT *, CONCAT(first_name, ' ', last_name) as full_name FROM STUDENTS_STREAM WHERE METADATA$ACTION = 'INSERT') s
 ON t.student_id = s.student_id
-WHEN MATCHED AND s.METADATA$ACTION = 'DELETE' THEN DELETE
 WHEN MATCHED THEN UPDATE SET 
     t.class_id = s.class_id, t.school_id = s.school_id, t.municipality_code = s.municipality_code, 
     t.first_name = s.first_name, t.last_name = s.last_name, t.full_name = s.full_name, t.gender = s.gender, 
@@ -196,9 +203,8 @@ CREATE OR REPLACE TASK PROCESS_CLASSES_TASK
     WHEN SYSTEM$STREAM_HAS_DATA('CLASSES_STREAM')
 AS
 MERGE INTO KMD_STAGING.CLEAN.CLASSES t
-USING (SELECT * FROM CLASSES_STREAM) s
+USING (SELECT * FROM CLASSES_STREAM WHERE METADATA$ACTION = 'INSERT') s
 ON t.class_id = s.class_id
-WHEN MATCHED AND s.METADATA$ACTION = 'DELETE' THEN DELETE
 WHEN MATCHED THEN UPDATE SET 
     t.school_id = s.school_id, t.municipality_code = s.municipality_code, t.grade = s.grade, t.section = s.section,
     t.class_name = s.class_name, t.academic_year = s.academic_year, t.max_students = s.max_students, 
@@ -215,24 +221,54 @@ ALTER TASK PROCESS_STUDENTS_TASK RESUME;
 ALTER TASK PROCESS_CLASSES_TASK RESUME;
 
 -- ============================================================================
--- VERIFY COMPLETE PIPELINE
+-- INITIAL LOAD: Populate CLEAN from existing RAW data
+-- ============================================================================
+-- Run this ONCE to sync existing baseline data to CLEAN layer
+
+INSERT INTO KMD_STAGING.CLEAN.SCHOOLS (school_id, municipality_code, school_name, school_type, address, postal_code, city, phone, email, founded_year, student_capacity, is_active)
+SELECT school_id, municipality_code, school_name, school_type, address, postal_code, city, phone, email, founded_year, student_capacity, is_active
+FROM KMD_STAGING.RAW.SCHOOLS_RAW
+ON CONFLICT (school_id) DO NOTHING;
+
+INSERT INTO KMD_STAGING.CLEAN.TEACHERS (teacher_id, school_id, municipality_code, first_name, last_name, full_name, gender, birth_date, email, phone, hire_date, subjects, salary_band, is_active)
+SELECT teacher_id, school_id, municipality_code, first_name, last_name, CONCAT(first_name, ' ', last_name), gender, birth_date, email, phone, hire_date, subjects, salary_band, is_active
+FROM KMD_STAGING.RAW.TEACHERS_RAW
+ON CONFLICT (teacher_id) DO NOTHING;
+
+INSERT INTO KMD_STAGING.CLEAN.STUDENTS (student_id, class_id, school_id, municipality_code, first_name, last_name, full_name, gender, birth_date, enrollment_date, guardian_name, guardian_phone, guardian_email, address, postal_code, special_needs, is_active)
+SELECT student_id, class_id, school_id, municipality_code, first_name, last_name, CONCAT(first_name, ' ', last_name), gender, birth_date, enrollment_date, guardian_name, guardian_phone, guardian_email, address, postal_code, special_needs, is_active
+FROM KMD_STAGING.RAW.STUDENTS_RAW
+ON CONFLICT (student_id) DO NOTHING;
+
+INSERT INTO KMD_STAGING.CLEAN.CLASSES (class_id, school_id, municipality_code, grade, section, class_name, academic_year, max_students, classroom_number, is_active)
+SELECT class_id, school_id, municipality_code, grade, section, class_name, academic_year, max_students, classroom_number, is_active
+FROM KMD_STAGING.RAW.CLASSES_RAW
+ON CONFLICT (class_id) DO NOTHING;
+
+-- ============================================================================
+-- VERIFY PIPELINE
 -- ============================================================================
 SHOW PIPES IN SCHEMA KMD_STAGING.RAW;
 SHOW STREAMS IN SCHEMA KMD_STAGING.CDC;
 SHOW TASKS IN SCHEMA KMD_STAGING.CDC;
 
 -- ============================================================================
--- S3 EVENT NOTIFICATION SETUP (Manual Step)
+-- HOW TO TEST THE PIPELINE
 -- ============================================================================
--- Add the SQS ARN from SHOW PIPES to your S3 bucket event notification:
--- 
--- 1. Go to S3 Console → Your Bucket → Properties → Event Notifications
--- 2. Create notification with:
---    - Event types: s3:ObjectCreated:*
---    - Destination: SQS Queue
---    - SQS ARN: (from notification_channel in SHOW PIPES output)
+-- 1. Upload a new dated file to S3:
+--    aws s3 cp dim_students_20260310.csv s3://ubulut-iceberg-oregon/data/
 --
--- The complete automated pipeline flow:
---   S3 file upload → S3 Event → SQS → Snowpipe → RAW table → 
---   Stream captures → Task processes → CLEAN table
+-- 2. Wait ~1-2 minutes for Snowpipe to detect and load
+--
+-- 3. Check RAW table count increased:
+--    SELECT COUNT(*) FROM KMD_STAGING.RAW.STUDENTS_RAW;
+--
+-- 4. Check stream has data:
+--    SELECT COUNT(*) FROM KMD_STAGING.CDC.STUDENTS_STREAM;
+--
+-- 5. Wait for task to run (every 5 min) OR run manually:
+--    EXECUTE TASK KMD_STAGING.CDC.PROCESS_STUDENTS_TASK;
+--
+-- 6. Check CLEAN table count increased:
+--    SELECT COUNT(*) FROM KMD_STAGING.CLEAN.STUDENTS;
 -- ============================================================================

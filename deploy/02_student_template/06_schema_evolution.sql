@@ -86,7 +86,7 @@ FROM TABLE(INFORMATION_SCHEMA.COPY_HISTORY(
     TABLE_NAME => '{MUNICIPALITY}_DB.RAW.STUDENTS_RAW',
     START_TIME => DATEADD('hour', -1, CURRENT_TIMESTAMP())
 ))
-WHERE STATUS = 'LOAD_FAILED'
+WHERE STATUS = 'Load failed'
 ORDER BY LAST_LOAD_TIME DESC LIMIT 5;
 
 -- ============================================================================

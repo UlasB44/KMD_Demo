@@ -162,12 +162,12 @@ EXECUTE TASK PROCESS_CLASSES_TASK;
 -- Check pipe status
 SELECT SYSTEM$PIPE_STATUS('{MUNICIPALITY}_DB.RAW.STUDENTS_PIPE');
 
--- Check pipe history (what files were loaded?)
-SELECT *
-FROM TABLE(INFORMATION_SCHEMA.PIPE_USAGE_HISTORY(
-    DATE_RANGE_START => DATEADD('hour', -1, CURRENT_TIMESTAMP()),
-    PIPE_NAME => '{MUNICIPALITY}_DB.RAW.STUDENTS_PIPE'
-));
+-- Check pipe usage (billing/credits - NOT file details)
+-- SELECT *
+-- FROM TABLE(INFORMATION_SCHEMA.PIPE_USAGE_HISTORY(
+--     DATE_RANGE_START => DATEADD('hour', -1, CURRENT_TIMESTAMP()),
+--     PIPE_NAME => '{MUNICIPALITY}_DB.RAW.STUDENTS_PIPE'
+-- ));
 
 -- Check copy history (detailed file load status)
 SELECT 

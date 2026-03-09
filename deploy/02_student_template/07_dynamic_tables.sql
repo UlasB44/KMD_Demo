@@ -141,17 +141,8 @@ WHERE COALESCE(s.is_active, TRUE) = TRUE;
 -- List all dynamic tables
 SHOW DYNAMIC TABLES IN SCHEMA {MUNICIPALITY}_DB.ANALYTICS;
 
--- Check refresh status
-SELECT 
-    name,
-    target_lag,
-    refresh_mode,
-    scheduling_state,
-    last_completed_refresh,
-    next_scheduled_refresh
-FROM TABLE(INFORMATION_SCHEMA.DYNAMIC_TABLES())
-WHERE CATALOG_NAME = '{MUNICIPALITY}_DB'
-ORDER BY name;
+-- Check refresh status (use SHOW output directly)
+-- SHOW DYNAMIC TABLES outputs include: name, schema, target_lag, warehouse, refresh_mode, etc.
 
 -- ============================================================================
 -- SAMPLE QUERIES

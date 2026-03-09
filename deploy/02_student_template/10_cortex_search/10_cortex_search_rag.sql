@@ -51,18 +51,22 @@ CREATE OR REPLACE STAGE PDF_STAGE
 -- Option B: Via SnowSQL CLI
 --   PUT file:///path/to/pdfs/{municipality}/*.pdf @PDF_STAGE AUTO_COMPRESS=FALSE;
 
+-- Refresh directory metadata (required after upload):
+ALTER STAGE PDF_STAGE REFRESH;
+
 -- List uploaded files (run after uploading):
 LIST @PDF_STAGE;
 
 -- ============================================================================
 -- STEP 4: CREATE TABLE FOR RAW PDF CONTENT
 -- ============================================================================
+-- Note: DIRECTORY() returns TIMESTAMP_TZ for LAST_MODIFIED
 
 CREATE OR REPLACE TABLE PDF_RAW (
     file_name VARCHAR,
     file_path VARCHAR,
     file_size NUMBER,
-    last_modified TIMESTAMP_NTZ,
+    last_modified TIMESTAMP_TZ,
     raw_content VARIANT,
     municipality_code NUMBER DEFAULT {MUNICIPALITY_CODE}
 );
@@ -90,7 +94,7 @@ WHERE RELATIVE_PATH LIKE '%.pdf';
 SELECT 
     file_name,
     file_size,
-    raw_content:content::VARCHAR AS extracted_text
+    SUBSTRING(raw_content:content::VARCHAR, 1, 500) AS extracted_text_preview
 FROM PDF_RAW
 LIMIT 5;
 
@@ -112,68 +116,51 @@ CREATE OR REPLACE TABLE PDF_CHUNKS (
 );
 
 -- ============================================================================
--- STEP 7: CHUNK THE DOCUMENTS
+-- STEP 7: CHUNK THE DOCUMENTS USING PURE SQL
 -- ============================================================================
--- This procedure splits documents into overlapping chunks
+-- This uses a recursive CTE to split documents into overlapping chunks
+-- CHUNK_SIZE = 800 characters, OVERLAP = 200 characters (step = 600)
 
-CREATE OR REPLACE PROCEDURE CHUNK_DOCUMENTS(
-    CHUNK_SIZE INT DEFAULT 800,
-    OVERLAP INT DEFAULT 200
+INSERT INTO PDF_CHUNKS (document_id, file_name, chunk_index, chunk_text, chunk_size, municipality_code)
+WITH 
+-- Step 1: Number the documents and extract text
+docs AS (
+    SELECT 
+        ROW_NUMBER() OVER (ORDER BY file_name) AS doc_id,
+        file_name,
+        raw_content:content::VARCHAR AS full_text,
+        municipality_code
+    FROM PDF_RAW
+    WHERE raw_content:content IS NOT NULL
+),
+-- Step 2: Generate chunk indices using a number generator
+-- Max chunks per doc = ceil(text_length / step_size) 
+numbers AS (
+    SELECT ROW_NUMBER() OVER (ORDER BY SEQ4()) - 1 AS n
+    FROM TABLE(GENERATOR(ROWCOUNT => 100))  -- Support up to 100 chunks per document
+),
+-- Step 3: Create chunks with 800 char size, 600 char step (200 overlap)
+chunked AS (
+    SELECT 
+        d.doc_id,
+        d.file_name,
+        n.n AS chunk_index,
+        SUBSTRING(d.full_text, n.n * 600 + 1, 800) AS chunk_text,
+        d.municipality_code
+    FROM docs d
+    CROSS JOIN numbers n
+    WHERE n.n * 600 < LENGTH(d.full_text)
 )
-RETURNS VARCHAR
-LANGUAGE JAVASCRIPT
-AS
-$$
-    var result = snowflake.execute({
-        sqlText: `SELECT 
-                    ROW_NUMBER() OVER (ORDER BY file_name) as doc_id,
-                    file_name, 
-                    raw_content:content::VARCHAR as full_text,
-                    municipality_code
-                  FROM PDF_RAW`
-    });
-    
-    var chunksInserted = 0;
-    
-    while (result.next()) {
-        var docId = result.getColumnValue('DOC_ID');
-        var fileName = result.getColumnValue('FILE_NAME');
-        var fullText = result.getColumnValue('FULL_TEXT');
-        var municipalityCode = result.getColumnValue('MUNICIPALITY_CODE');
-        
-        if (!fullText) continue;
-        
-        var chunkIndex = 0;
-        var position = 0;
-        
-        while (position < fullText.length) {
-            var end = Math.min(position + CHUNK_SIZE, fullText.length);
-            var chunk = fullText.substring(position, end);
-            
-            // Clean the chunk
-            chunk = chunk.replace(/'/g, "''");
-            
-            var insertSql = `INSERT INTO PDF_CHUNKS 
-                (document_id, file_name, chunk_index, chunk_text, chunk_size, municipality_code)
-                VALUES (${docId}, '${fileName}', ${chunkIndex}, '${chunk}', ${chunk.length}, ${municipalityCode})`;
-            
-            try {
-                snowflake.execute({sqlText: insertSql});
-                chunksInserted++;
-            } catch (err) {
-                // Skip problematic chunks
-            }
-            
-            chunkIndex++;
-            position += (CHUNK_SIZE - OVERLAP);
-        }
-    }
-    
-    return 'Inserted ' + chunksInserted + ' chunks';
-$$;
-
--- Execute chunking (800 char chunks with 200 char overlap):
-CALL CHUNK_DOCUMENTS(800, 200);
+SELECT 
+    doc_id,
+    file_name,
+    chunk_index,
+    chunk_text,
+    LENGTH(chunk_text) AS chunk_size,
+    municipality_code
+FROM chunked
+WHERE LENGTH(chunk_text) > 0
+ORDER BY doc_id, chunk_index;
 
 -- Verify chunks:
 SELECT 
@@ -190,10 +177,50 @@ SELECT
     file_name,
     COUNT(*) AS num_chunks,
     SUM(chunk_size) AS total_chars,
-    AVG(chunk_size) AS avg_chunk_size
+    ROUND(AVG(chunk_size), 0) AS avg_chunk_size
 FROM PDF_CHUNKS
 GROUP BY file_name
 ORDER BY file_name;
+
+-- ============================================================================
+-- ALTERNATIVE: SQL CHUNKING EXAMPLE (COMMENTED OUT)
+-- ============================================================================
+-- This is a standalone example showing how chunking works with sample text.
+-- Useful for understanding the recursive CTE approach.
+/*
+-- Pure SQL Text Chunking Example
+-- Parameters: CHUNK_SIZE=50, STEP_SIZE=40 (overlap=10)
+WITH sample_docs AS (
+    SELECT 1 AS doc_id, 'doc1.pdf' AS file_name, 
+           'This is a sample document text that we want to chunk into smaller pieces. Each chunk should have some overlap with the next one to preserve context.' AS full_text
+    UNION ALL
+    SELECT 2, 'doc2.pdf', 
+           'Another example document showing how the chunking process works across multiple documents in a single query.'
+),
+numbers AS (
+    SELECT ROW_NUMBER() OVER (ORDER BY SEQ4()) - 1 AS n
+    FROM TABLE(GENERATOR(ROWCOUNT => 20))
+),
+chunked AS (
+    SELECT 
+        d.doc_id,
+        d.file_name,
+        n.n AS chunk_index,
+        SUBSTRING(d.full_text, n.n * 40 + 1, 50) AS chunk_text
+    FROM sample_docs d
+    CROSS JOIN numbers n
+    WHERE n.n * 40 < LENGTH(d.full_text)
+)
+SELECT 
+    doc_id,
+    file_name,
+    chunk_index,
+    chunk_text,
+    LENGTH(chunk_text) AS chunk_size
+FROM chunked
+WHERE LENGTH(chunk_text) > 0
+ORDER BY doc_id, chunk_index;
+*/
 
 -- ============================================================================
 -- STEP 8: CREATE FINAL SEARCH-READY TABLE

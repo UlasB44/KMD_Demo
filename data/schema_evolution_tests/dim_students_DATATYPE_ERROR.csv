@@ -1,3 +1,0 @@
-student_id,class_id,school_id,municipality_code,cpr_number,cpr_masked,first_name,last_name,gender,birth_date,enrollment_date,guardian_name,guardian_phone,guardian_email,address,postal_code,special_needs,is_active,created_at,updated_at
-STU-561-99903,CLS-561-001,SCH-561-01,THIS_IS_NOT_AN_INTEGER,0203881234,020388-XXXX,Emma,Pedersen,F,1988-03-02,2025-08-15,Hans Pedersen,+45 11223344,hans@example.dk,Strandvej 10,6700,None,true,2026-03-10 08:00:00,2026-03-10 08:00:00
-STU-561-99904,CLS-561-001,SCH-561-01,WRONG_TYPE,1012901234,101290-XXXX,Oliver,Andersen,M,1990-12-10,2025-08-15,Kirsten Andersen,+45 55667788,kirsten@example.dk,Hovedgaden 22,6700,None,true,2026-03-10 08:00:00,2026-03-10 08:00:00

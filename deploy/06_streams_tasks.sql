@@ -1,12 +1,53 @@
 -- ============================================================================
--- KMD WORKSHOP - STEP 6: STREAMS & TASKS (CDC Pipeline)
+-- KMD WORKSHOP - STEP 6: SNOWPIPE + STREAMS & TASKS (Complete CDC Pipeline)
 -- ============================================================================
--- Creates streams for change data capture and tasks for processing
+-- Creates the COMPLETE automated pipeline:
+--   S3 → Snowpipe → RAW → Stream → Task → CLEAN
 -- ============================================================================
 
-USE ROLE SYSADMIN;
+USE ROLE ACCOUNTADMIN;
 USE DATABASE KMD_STAGING;
 USE WAREHOUSE KMD_WH;
+
+-- ============================================================================
+-- SNOWPIPES (Auto-ingest from S3)
+-- ============================================================================
+-- These pipes automatically load data when new files arrive in S3
+-- Requires S3 event notification pointing to the SQS queue shown in SHOW PIPES
+
+USE SCHEMA RAW;
+
+CREATE OR REPLACE PIPE SCHOOLS_PIPE
+    AUTO_INGEST = TRUE
+AS
+COPY INTO SCHOOLS_RAW
+FROM @KMD_STAGING.EXTERNAL_STAGES.COMBINED_STAGE/dim_schools_all.csv
+FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT');
+
+CREATE OR REPLACE PIPE TEACHERS_PIPE
+    AUTO_INGEST = TRUE
+AS
+COPY INTO TEACHERS_RAW
+FROM @KMD_STAGING.EXTERNAL_STAGES.COMBINED_STAGE/dim_teachers_all.csv
+FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT');
+
+CREATE OR REPLACE PIPE STUDENTS_PIPE
+    AUTO_INGEST = TRUE
+AS
+COPY INTO STUDENTS_RAW
+FROM @KMD_STAGING.EXTERNAL_STAGES.COMBINED_STAGE/dim_students_all.csv
+FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT');
+
+CREATE OR REPLACE PIPE CLASSES_PIPE
+    AUTO_INGEST = TRUE
+AS
+COPY INTO CLASSES_RAW
+FROM @KMD_STAGING.EXTERNAL_STAGES.COMBINED_STAGE/dim_classes_all.csv
+FILE_FORMAT = (FORMAT_NAME = 'KMD_STAGING.EXTERNAL_STAGES.CSV_FORMAT');
+
+-- Get the SQS ARN for S3 event notification setup
+-- Add this ARN to your S3 bucket's event notification configuration
+SHOW PIPES IN SCHEMA KMD_STAGING.RAW;
 
 -- ============================================================================
 -- CLEAN TABLES (Silver Layer - destination for CDC)
@@ -83,7 +124,7 @@ CREATE OR REPLACE TABLE CLASSES (
 );
 
 -- ============================================================================
--- STREAMS (Track changes on RAW tables)
+-- STREAMS (Track changes on RAW tables - fed by Snowpipe)
 -- ============================================================================
 USE SCHEMA CDC;
 
@@ -166,15 +207,32 @@ WHEN NOT MATCHED THEN INSERT (class_id, school_id, municipality_code, grade, sec
 VALUES (s.class_id, s.school_id, s.municipality_code, s.grade, s.section, s.class_name, s.academic_year, s.max_students, s.classroom_number, s.is_active);
 
 -- ============================================================================
--- RESUME TASKS (uncomment to enable scheduled execution)
+-- RESUME TASKS (Enable scheduled execution)
 -- ============================================================================
--- ALTER TASK PROCESS_SCHOOLS_TASK RESUME;
--- ALTER TASK PROCESS_TEACHERS_TASK RESUME;
--- ALTER TASK PROCESS_STUDENTS_TASK RESUME;
--- ALTER TASK PROCESS_CLASSES_TASK RESUME;
+ALTER TASK PROCESS_SCHOOLS_TASK RESUME;
+ALTER TASK PROCESS_TEACHERS_TASK RESUME;
+ALTER TASK PROCESS_STUDENTS_TASK RESUME;
+ALTER TASK PROCESS_CLASSES_TASK RESUME;
 
 -- ============================================================================
--- VERIFY
+-- VERIFY COMPLETE PIPELINE
 -- ============================================================================
+SHOW PIPES IN SCHEMA KMD_STAGING.RAW;
 SHOW STREAMS IN SCHEMA KMD_STAGING.CDC;
 SHOW TASKS IN SCHEMA KMD_STAGING.CDC;
+
+-- ============================================================================
+-- S3 EVENT NOTIFICATION SETUP (Manual Step)
+-- ============================================================================
+-- Add the SQS ARN from SHOW PIPES to your S3 bucket event notification:
+-- 
+-- 1. Go to S3 Console → Your Bucket → Properties → Event Notifications
+-- 2. Create notification with:
+--    - Event types: s3:ObjectCreated:*
+--    - Destination: SQS Queue
+--    - SQS ARN: (from notification_channel in SHOW PIPES output)
+--
+-- The complete automated pipeline flow:
+--   S3 file upload → S3 Event → SQS → Snowpipe → RAW table → 
+--   Stream captures → Task processes → CLEAN table
+-- ============================================================================

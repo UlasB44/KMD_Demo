@@ -148,3 +148,78 @@ EXECUTE TASK PROCESS_STUDENTS_TASK;
 EXECUTE TASK PROCESS_TEACHERS_TASK;
 EXECUTE TASK PROCESS_CLASSES_TASK;
 */
+
+-- ============================================================================
+-- TESTING THE PIPELINE
+-- ============================================================================
+-- 
+-- STEP 1: Upload a CSV file to S3
+--   aws s3 cp dim_students_20260310.csv s3://ubulut-iceberg-oregon/data/{municipality}/
+--
+-- STEP 2: Check if Snowpipe detected the file (wait ~1 min)
+-- ============================================================================
+
+-- Check pipe status
+SELECT SYSTEM$PIPE_STATUS('{MUNICIPALITY}_DB.RAW.STUDENTS_PIPE');
+
+-- Check pipe history (what files were loaded?)
+SELECT *
+FROM TABLE(INFORMATION_SCHEMA.PIPE_USAGE_HISTORY(
+    DATE_RANGE_START => DATEADD('hour', -1, CURRENT_TIMESTAMP()),
+    PIPE_NAME => '{MUNICIPALITY}_DB.RAW.STUDENTS_PIPE'
+));
+
+-- Check copy history (detailed file load status)
+SELECT 
+    FILE_NAME,
+    STATUS,
+    ROW_COUNT,
+    ERROR_COUNT,
+    FIRST_ERROR_MESSAGE,
+    LAST_LOAD_TIME
+FROM TABLE(INFORMATION_SCHEMA.COPY_HISTORY(
+    TABLE_NAME => '{MUNICIPALITY}_DB.RAW.STUDENTS_RAW',
+    START_TIME => DATEADD('hour', -1, CURRENT_TIMESTAMP())
+))
+ORDER BY LAST_LOAD_TIME DESC
+LIMIT 10;
+
+-- ============================================================================
+-- VERIFY DATA FLOW
+-- ============================================================================
+
+-- 1. RAW table (Snowpipe loads here)
+SELECT 'RAW.STUDENTS_RAW' as layer, COUNT(*) as record_count 
+FROM {MUNICIPALITY}_DB.RAW.STUDENTS_RAW;
+
+-- 2. Stream (shows pending changes)
+SELECT 'CDC.STUDENTS_STREAM' as layer, COUNT(*) as pending_changes 
+FROM {MUNICIPALITY}_DB.CDC.STUDENTS_STREAM;
+
+-- 3. CLEAN table (Task merges here)
+SELECT 'CLEAN.STUDENTS' as layer, COUNT(*) as record_count 
+FROM {MUNICIPALITY}_DB.CLEAN.STUDENTS;
+
+-- ============================================================================
+-- FORCE TASK EXECUTION (don't wait for schedule)
+-- ============================================================================
+-- Uncomment to manually trigger:
+-- EXECUTE TASK {MUNICIPALITY}_DB.CDC.PROCESS_STUDENTS_TASK;
+-- EXECUTE TASK {MUNICIPALITY}_DB.CDC.PROCESS_TEACHERS_TASK;
+-- EXECUTE TASK {MUNICIPALITY}_DB.CDC.PROCESS_CLASSES_TASK;
+
+-- ============================================================================
+-- CHECK TASK EXECUTION HISTORY
+-- ============================================================================
+SELECT 
+    NAME,
+    STATE,
+    SCHEDULED_TIME,
+    COMPLETED_TIME,
+    ERROR_MESSAGE
+FROM TABLE(INFORMATION_SCHEMA.TASK_HISTORY(
+    TASK_NAME => 'PROCESS_STUDENTS_TASK',
+    SCHEDULED_TIME_RANGE_START => DATEADD('hour', -1, CURRENT_TIMESTAMP())
+))
+ORDER BY SCHEDULED_TIME DESC
+LIMIT 5;

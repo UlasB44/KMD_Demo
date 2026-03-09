@@ -1,8 +1,14 @@
 -- ============================================================================
 -- STUDENT EXERCISE - STEP 9: CORTEX AI SQL FUNCTIONS
 -- ============================================================================
--- Replace {MUNICIPALITY} with your assigned municipality (uppercase)
--- Replace {CODE} with your municipality code
+-- Replace {MUNICIPALITY} with your assigned municipality (e.g., ESBJERG)
+-- 
+-- Municipality Reference:
+--   COPENHAGEN  -> Code: 101
+--   AARHUS      -> Code: 751
+--   ODENSE      -> Code: 461
+--   AALBORG     -> Code: 851
+--   ESBJERG     -> Code: 561
 -- ============================================================================
 -- Snowflake Cortex AI functions bring LLM capabilities directly into SQL
 -- No API keys, no external services - runs natively in Snowflake
@@ -130,7 +136,7 @@ LIMIT 10;
 SELECT 
     SNOWFLAKE.CORTEX.SUMMARIZE(
         CONCAT(
-            'Municipality Education Report for {municipality_name} (Code: {CODE}). ',
+            'Municipality Education Report for ', municipality_name, ' (Code: ', municipality_code, '). ',
             'Total Students: ', total_students, '. ',
             'Total Teachers: ', total_teachers, '. ',
             'Total Classes: ', total_classes, '. ',
@@ -181,7 +187,8 @@ LIMIT 5;
 SELECT 
     SNOWFLAKE.CORTEX.EXTRACT_ANSWER(
         CONCAT(
-            'The municipality of {municipality_name} has ', 
+            'The municipality of ',
+            (SELECT municipality_name FROM DT_MUNICIPALITY_OVERVIEW), ' has ', 
             (SELECT total_students FROM DT_MUNICIPALITY_OVERVIEW), ' students and ',
             (SELECT total_teachers FROM DT_MUNICIPALITY_OVERVIEW), ' teachers. ',
             'The student-teacher ratio is ',

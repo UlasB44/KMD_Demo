@@ -1,9 +1,14 @@
 -- ============================================================================
 -- STUDENT EXERCISE - STEP 7: DYNAMIC TABLES (Analytics Layer)
 -- ============================================================================
--- Replace {MUNICIPALITY} with your assigned municipality (uppercase)
--- Replace {municipality_name} with your municipality name (e.g., 'Copenhagen')
--- Replace {CODE} with your municipality code
+-- Replace {MUNICIPALITY} with your assigned municipality (e.g., ESBJERG)
+-- 
+-- Municipality Reference:
+--   COPENHAGEN  -> Code: 101
+--   AARHUS      -> Code: 751
+--   ODENSE      -> Code: 461
+--   AALBORG     -> Code: 851
+--   ESBJERG     -> Code: 561
 -- ============================================================================
 -- Dynamic Tables automatically refresh based on TARGET_LAG
 -- They provide a simple way to create derived/aggregated views that stay fresh
@@ -110,8 +115,15 @@ CREATE OR REPLACE DYNAMIC TABLE DT_MUNICIPALITY_OVERVIEW
     WAREHOUSE = KMD_WH
 AS
 SELECT 
-    {CODE} AS municipality_code,
-    '{municipality_name}' AS municipality_name,
+    s.municipality_code,
+    CASE s.municipality_code 
+        WHEN 101 THEN 'Copenhagen' 
+        WHEN 751 THEN 'Aarhus' 
+        WHEN 461 THEN 'Odense'
+        WHEN 851 THEN 'Aalborg' 
+        WHEN 561 THEN 'Esbjerg' 
+        ELSE 'Unknown'
+    END AS municipality_name,
     COUNT(DISTINCT s.student_id) AS total_students,
     COUNT(DISTINCT t.teacher_id) AS total_teachers,
     COUNT(DISTINCT c.class_id) AS total_classes,

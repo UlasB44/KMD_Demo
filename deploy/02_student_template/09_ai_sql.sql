@@ -28,7 +28,7 @@ USE WAREHOUSE KMD_WH;
 SELECT 
     s.student_id,
     s.full_name,
-    s.grade,
+    c.grade,
     SNOWFLAKE.CORTEX.COMPLETE(
         'llama3.1-8b',
         CONCAT(
@@ -167,9 +167,9 @@ LIMIT 5;
 
 -- Translate student summary to Danish
 SELECT 
-    full_name,
+    s.full_name,
     SNOWFLAKE.CORTEX.TRANSLATE(
-        CONCAT(full_name, ' is a student in grade ', c.grade, ' at our school.'),
+        CONCAT(s.full_name, ' is a student in grade ', c.grade, ' at our school.'),
         'en',
         'da'
     ) AS danish_description

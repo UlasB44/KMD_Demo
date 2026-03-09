@@ -11,7 +11,6 @@ This repository contains all materials for the KMD Snowflake Onboarding Workshop
 | Data Integration | 2.5 hours | External stages (S3), Snowpipe, Streams & Tasks, Schema Evolution |
 | Transformation | 2 hours | Data masking, Dynamic Tables, dbt |
 | AI & Reporting | 2 hours | Semantic Views, Cortex Analyst, Streamlit |
-| Hands-on Labs | 1.5 hours | Guided exercises |
 
 **Total: ~8 hours (full day workshop)**
 

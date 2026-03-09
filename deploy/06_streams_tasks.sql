@@ -2,10 +2,16 @@
 -- KMD WORKSHOP - STEP 6: SNOWPIPE + STREAMS & TASKS (Complete CDC Pipeline)
 -- ============================================================================
 -- Creates the COMPLETE automated pipeline:
---   S3 → Snowpipe (PATTERN matching) → RAW → Stream → Task → CLEAN
+--   S3 → Snowpipe (PATTERN matching) → RAW → Stream → Task (MERGE) → CLEAN
 -- 
--- PATTERN matching allows multiple dated files:
---   dim_students_20260310.csv, dim_students_20260311.csv, etc.
+-- FULL LOAD pattern: Each municipality sends complete dataset daily
+--   Day 2 file = Day 1 records + new records
+--   MERGE handles deduplication by primary key
+--
+-- S3 structure:
+--   s3://bucket/data/copenhagen/dim_students_20260310.csv
+--   s3://bucket/data/aarhus/dim_students_20260310.csv
+--   etc.
 -- ============================================================================
 
 USE ROLE ACCOUNTADMIN;
@@ -15,8 +21,7 @@ USE WAREHOUSE KMD_WH;
 -- ============================================================================
 -- SNOWPIPES (Auto-ingest from S3 with PATTERN matching)
 -- ============================================================================
--- These pipes automatically load data when new files arrive in S3
--- PATTERN allows dated filenames: dim_students_YYYYMMDD.csv
+-- Pattern matches municipality subfolders: */dim_students_YYYYMMDD.csv
 
 USE SCHEMA RAW;
 
@@ -25,7 +30,7 @@ CREATE OR REPLACE PIPE STUDENTS_PIPE
 AS
 COPY INTO STUDENTS_RAW
 FROM @EXTERNAL_STAGES.COMBINED_STAGE/
-PATTERN = '.*dim_students.*\.csv'
+PATTERN = '.*/dim_students_[0-9]+\.csv'
 FILE_FORMAT = (FORMAT_NAME = 'EXTERNAL_STAGES.CSV_FORMAT');
 
 CREATE OR REPLACE PIPE TEACHERS_PIPE
@@ -33,7 +38,7 @@ CREATE OR REPLACE PIPE TEACHERS_PIPE
 AS
 COPY INTO TEACHERS_RAW
 FROM @EXTERNAL_STAGES.COMBINED_STAGE/
-PATTERN = '.*dim_teachers.*\.csv'
+PATTERN = '.*/dim_teachers_[0-9]+\.csv'
 FILE_FORMAT = (FORMAT_NAME = 'EXTERNAL_STAGES.CSV_FORMAT');
 
 CREATE OR REPLACE PIPE CLASSES_PIPE
@@ -41,7 +46,7 @@ CREATE OR REPLACE PIPE CLASSES_PIPE
 AS
 COPY INTO CLASSES_RAW
 FROM @EXTERNAL_STAGES.COMBINED_STAGE/
-PATTERN = '.*dim_classes.*\.csv'
+PATTERN = '.*/dim_classes_[0-9]+\.csv'
 FILE_FORMAT = (FORMAT_NAME = 'EXTERNAL_STAGES.CSV_FORMAT');
 
 CREATE OR REPLACE PIPE SCHOOLS_PIPE
@@ -49,14 +54,14 @@ CREATE OR REPLACE PIPE SCHOOLS_PIPE
 AS
 COPY INTO SCHOOLS_RAW
 FROM @EXTERNAL_STAGES.COMBINED_STAGE/
-PATTERN = '.*dim_schools.*\.csv'
+PATTERN = '.*/dim_schools_[0-9]+\.csv'
 FILE_FORMAT = (FORMAT_NAME = 'EXTERNAL_STAGES.CSV_FORMAT');
 
 -- Get the SQS ARN for S3 event notification setup
 SHOW PIPES IN SCHEMA KMD_STAGING.RAW;
 
 -- ============================================================================
--- CLEAN TABLES (Silver Layer - destination for CDC)
+-- CLEAN TABLES (Silver Layer - deduplicated destination)
 -- ============================================================================
 USE SCHEMA CLEAN;
 
@@ -130,7 +135,7 @@ CREATE TABLE IF NOT EXISTS CLASSES (
 );
 
 -- ============================================================================
--- STREAMS (Track changes on RAW tables - fed by Snowpipe)
+-- STREAMS (Track changes on RAW tables)
 -- ============================================================================
 USE SCHEMA CDC;
 
@@ -140,12 +145,12 @@ CREATE OR REPLACE STREAM STUDENTS_STREAM ON TABLE KMD_STAGING.RAW.STUDENTS_RAW;
 CREATE OR REPLACE STREAM CLASSES_STREAM ON TABLE KMD_STAGING.RAW.CLASSES_RAW;
 
 -- ============================================================================
--- TASKS (Process stream data into CLEAN tables via MERGE)
+-- TASKS (MERGE stream data into CLEAN - handles full-load deduplication)
 -- ============================================================================
 -- MERGE ensures:
---   - New records are INSERTED
---   - Existing records are UPDATED (by primary key)
---   - No duplicates in CLEAN layer
+--   - New records (by PK) are INSERTED
+--   - Existing records are UPDATED 
+--   - Full-load duplicates are handled gracefully
 
 CREATE OR REPLACE TASK PROCESS_SCHOOLS_TASK
     WAREHOUSE = KMD_WH
@@ -213,7 +218,7 @@ WHEN NOT MATCHED THEN INSERT (class_id, school_id, municipality_code, grade, sec
 VALUES (s.class_id, s.school_id, s.municipality_code, s.grade, s.section, s.class_name, s.academic_year, s.max_students, s.classroom_number, s.is_active);
 
 -- ============================================================================
--- RESUME TASKS (Enable scheduled execution)
+-- RESUME TASKS
 -- ============================================================================
 ALTER TASK PROCESS_SCHOOLS_TASK RESUME;
 ALTER TASK PROCESS_TEACHERS_TASK RESUME;
@@ -221,29 +226,30 @@ ALTER TASK PROCESS_STUDENTS_TASK RESUME;
 ALTER TASK PROCESS_CLASSES_TASK RESUME;
 
 -- ============================================================================
--- INITIAL LOAD: Populate CLEAN from existing RAW data
+-- INITIAL LOAD: Populate CLEAN from existing RAW data (run once)
 -- ============================================================================
--- Run this ONCE to sync existing baseline data to CLEAN layer
+/*
+TRUNCATE TABLE KMD_STAGING.CLEAN.SCHOOLS;
+TRUNCATE TABLE KMD_STAGING.CLEAN.TEACHERS;
+TRUNCATE TABLE KMD_STAGING.CLEAN.STUDENTS;
+TRUNCATE TABLE KMD_STAGING.CLEAN.CLASSES;
 
 INSERT INTO KMD_STAGING.CLEAN.SCHOOLS (school_id, municipality_code, school_name, school_type, address, postal_code, city, phone, email, founded_year, student_capacity, is_active)
 SELECT school_id, municipality_code, school_name, school_type, address, postal_code, city, phone, email, founded_year, student_capacity, is_active
-FROM KMD_STAGING.RAW.SCHOOLS_RAW
-ON CONFLICT (school_id) DO NOTHING;
+FROM KMD_STAGING.RAW.SCHOOLS_RAW;
 
 INSERT INTO KMD_STAGING.CLEAN.TEACHERS (teacher_id, school_id, municipality_code, first_name, last_name, full_name, gender, birth_date, email, phone, hire_date, subjects, salary_band, is_active)
 SELECT teacher_id, school_id, municipality_code, first_name, last_name, CONCAT(first_name, ' ', last_name), gender, birth_date, email, phone, hire_date, subjects, salary_band, is_active
-FROM KMD_STAGING.RAW.TEACHERS_RAW
-ON CONFLICT (teacher_id) DO NOTHING;
+FROM KMD_STAGING.RAW.TEACHERS_RAW;
 
 INSERT INTO KMD_STAGING.CLEAN.STUDENTS (student_id, class_id, school_id, municipality_code, first_name, last_name, full_name, gender, birth_date, enrollment_date, guardian_name, guardian_phone, guardian_email, address, postal_code, special_needs, is_active)
 SELECT student_id, class_id, school_id, municipality_code, first_name, last_name, CONCAT(first_name, ' ', last_name), gender, birth_date, enrollment_date, guardian_name, guardian_phone, guardian_email, address, postal_code, special_needs, is_active
-FROM KMD_STAGING.RAW.STUDENTS_RAW
-ON CONFLICT (student_id) DO NOTHING;
+FROM KMD_STAGING.RAW.STUDENTS_RAW;
 
 INSERT INTO KMD_STAGING.CLEAN.CLASSES (class_id, school_id, municipality_code, grade, section, class_name, academic_year, max_students, classroom_number, is_active)
 SELECT class_id, school_id, municipality_code, grade, section, class_name, academic_year, max_students, classroom_number, is_active
-FROM KMD_STAGING.RAW.CLASSES_RAW
-ON CONFLICT (class_id) DO NOTHING;
+FROM KMD_STAGING.RAW.CLASSES_RAW;
+*/
 
 -- ============================================================================
 -- VERIFY PIPELINE
@@ -253,22 +259,28 @@ SHOW STREAMS IN SCHEMA KMD_STAGING.CDC;
 SHOW TASKS IN SCHEMA KMD_STAGING.CDC;
 
 -- ============================================================================
--- HOW TO TEST THE PIPELINE
+-- DEMO: TESTING THE PIPELINE
 -- ============================================================================
--- 1. Upload a new dated file to S3:
---    aws s3 cp dim_students_20260310.csv s3://ubulut-iceberg-oregon/data/
+-- 
+-- S3 Structure for municipality files:
+--   s3://ubulut-iceberg-oregon/data/copenhagen/dim_students_20260310.csv
+--   s3://ubulut-iceberg-oregon/data/aarhus/dim_students_20260310.csv
+--   s3://ubulut-iceberg-oregon/data/odense/dim_students_20260310.csv
+--   s3://ubulut-iceberg-oregon/data/aalborg/dim_students_20260310.csv
+--   s3://ubulut-iceberg-oregon/data/esbjerg/dim_students_20260310.csv
 --
--- 2. Wait ~1-2 minutes for Snowpipe to detect and load
+-- Full-load pattern:
+--   Day 1 (20260310): Baseline ~2900 students per municipality
+--   Day 2 (20260311): Day 1 + 10 new students = ~2910 total
+--   Day 3 (20260312): Day 2 + 10 new students = ~2920 total
 --
--- 3. Check RAW table count increased:
---    SELECT COUNT(*) FROM KMD_STAGING.RAW.STUDENTS_RAW;
+-- Test steps:
+--   1. Upload Day 1 file: aws s3 cp copenhagen/dim_students_20260310.csv s3://bucket/data/copenhagen/
+--   2. Check RAW count: SELECT COUNT(*) FROM KMD_STAGING.RAW.STUDENTS_RAW WHERE municipality_code = 101;
+--   3. Check stream: SELECT COUNT(*) FROM KMD_STAGING.CDC.STUDENTS_STREAM;
+--   4. Execute task (or wait 5 min): EXECUTE TASK KMD_STAGING.CDC.PROCESS_STUDENTS_TASK;
+--   5. Check CLEAN: SELECT COUNT(*) FROM KMD_STAGING.CLEAN.STUDENTS WHERE municipality_code = 101;
+--   6. Upload Day 2: aws s3 cp copenhagen/dim_students_20260311.csv s3://bucket/data/copenhagen/
+--   7. After MERGE: CLEAN should only have +10 new records (not 2910 duplicates)
 --
--- 4. Check stream has data:
---    SELECT COUNT(*) FROM KMD_STAGING.CDC.STUDENTS_STREAM;
---
--- 5. Wait for task to run (every 5 min) OR run manually:
---    EXECUTE TASK KMD_STAGING.CDC.PROCESS_STUDENTS_TASK;
---
--- 6. Check CLEAN table count increased:
---    SELECT COUNT(*) FROM KMD_STAGING.CLEAN.STUDENTS;
 -- ============================================================================

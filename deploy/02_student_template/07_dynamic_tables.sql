@@ -193,3 +193,57 @@ ALTER DYNAMIC TABLE DT_CLASS_ENROLLMENT RESUME;
 ALTER DYNAMIC TABLE DT_TEACHER_WORKLOAD RESUME;
 ALTER DYNAMIC TABLE DT_MUNICIPALITY_OVERVIEW RESUME;
 */
+
+-- ============================================================================
+-- APPLY MASKING POLICIES TO DYNAMIC TABLES
+-- ============================================================================
+-- IMPORTANT: Masking policies on source tables don't automatically apply to DTs
+-- because DTs materialize data using the owner role at refresh time.
+-- We must apply policies directly to DT columns for query-time masking.
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- Grant ANALYTICS schema access to analyst role
+GRANT USAGE ON SCHEMA {MUNICIPALITY}_DB.ANALYTICS TO ROLE {MUNICIPALITY}_ANALYST;
+GRANT SELECT ON ALL DYNAMIC TABLES IN SCHEMA {MUNICIPALITY}_DB.ANALYTICS TO ROLE {MUNICIPALITY}_ANALYST;
+
+-- DT_TEACHER_WORKLOAD contains teacher_name (PII)
+-- Reuse the masking policies created in 06_security.sql
+CREATE OR REPLACE MASKING POLICY NAME_MASK AS (val VARCHAR) RETURNS VARCHAR ->
+    CASE 
+        WHEN IS_ROLE_IN_SESSION('ACCOUNTADMIN') THEN val
+        ELSE CONCAT(LEFT(val, 1), '*** ', LEFT(SPLIT_PART(val, ' ', -1), 1), '***')
+    END;
+
+ALTER TABLE {MUNICIPALITY}_DB.ANALYTICS.DT_TEACHER_WORKLOAD 
+    MODIFY COLUMN teacher_name SET MASKING POLICY NAME_MASK;
+
+-- ============================================================================
+-- TEST MASKING ON DYNAMIC TABLES
+-- ============================================================================
+
+-- As ACCOUNTADMIN (should see full names):
+SELECT teacher_id, teacher_name, subjects, workload_level 
+FROM DT_TEACHER_WORKLOAD LIMIT 5;
+
+-- As ANALYST (should see masked names like "J*** S***"):
+/*
+USE ROLE {MUNICIPALITY}_ANALYST;
+SELECT teacher_id, teacher_name, subjects, workload_level 
+FROM DT_TEACHER_WORKLOAD LIMIT 5;
+*/
+
+-- ============================================================================
+-- VERIFY: Compare source vs DT masking
+-- ============================================================================
+/*
+-- Source table (masking from 06_security.sql)
+USE ROLE {MUNICIPALITY}_ANALYST;
+SELECT teacher_id, first_name, last_name, email, phone 
+FROM {MUNICIPALITY}_DB.CLEAN.TEACHERS LIMIT 3;
+
+-- Dynamic Table (masking from this script)
+SELECT teacher_id, teacher_name, subjects
+FROM DT_TEACHER_WORKLOAD LIMIT 3;
+*/

@@ -115,15 +115,10 @@ CREATE OR REPLACE DYNAMIC TABLE DT_MUNICIPALITY_OVERVIEW
     WAREHOUSE = KMD_WH
 AS
 SELECT 
-    s.municipality_code,
-    CASE s.municipality_code 
-        WHEN 101 THEN 'Copenhagen' 
-        WHEN 751 THEN 'Aarhus' 
-        WHEN 461 THEN 'Odense'
-        WHEN 851 THEN 'Aalborg' 
-        WHEN 561 THEN 'Esbjerg' 
-        ELSE 'Unknown'
-    END AS municipality_name,
+    -- Replace these literal values with your municipality
+    -- Copenhagen=101, Aarhus=751, Odense=461, Aalborg=851, Esbjerg=561
+    561 AS municipality_code,
+    'Esbjerg' AS municipality_name,
     COUNT(DISTINCT s.student_id) AS total_students,
     COUNT(DISTINCT t.teacher_id) AS total_teachers,
     COUNT(DISTINCT c.class_id) AS total_classes,

@@ -35,52 +35,51 @@ CREATE OR REPLACE FILE FORMAT CSV_SCHEMA_EVOLUTION
     ERROR_ON_COLUMN_COUNT_MISMATCH = FALSE;
 
 -- ============================================================================
--- SECTION 2: External Stages (using TRACKMAN storage integration)
+-- SECTION 2: External Stages (using KMD_S3_INTEGRATION storage integration)
 -- ============================================================================
--- Note: TRACKMAN integration already exists and covers s3://ubulut-iceberg-oregon/
 
 -- Main external stage for all KMD data (root)
 CREATE OR REPLACE STAGE KMD_S3_STAGE
-    STORAGE_INTEGRATION = TRACKMAN
-    URL = 's3://ubulut-iceberg-oregon/kmd/'
+    STORAGE_INTEGRATION = KMD_S3_INTEGRATION
+    URL = 's3://ubulut-iceberg-oregon/data/'
     FILE_FORMAT = CSV_FORMAT
     COMMENT = 'Root external stage for all KMD school data';
 
 -- Municipality-specific external stages
 CREATE OR REPLACE STAGE COPENHAGEN_STAGE
-    STORAGE_INTEGRATION = TRACKMAN
-    URL = 's3://ubulut-iceberg-oregon/kmd/copenhagen/'
+    STORAGE_INTEGRATION = KMD_S3_INTEGRATION
+    URL = 's3://ubulut-iceberg-oregon/data/copenhagen/'
     FILE_FORMAT = CSV_FORMAT
     COMMENT = 'External stage for Copenhagen municipality data';
 
 CREATE OR REPLACE STAGE AARHUS_STAGE
-    STORAGE_INTEGRATION = TRACKMAN
-    URL = 's3://ubulut-iceberg-oregon/kmd/aarhus/'
+    STORAGE_INTEGRATION = KMD_S3_INTEGRATION
+    URL = 's3://ubulut-iceberg-oregon/data/aarhus/'
     FILE_FORMAT = CSV_FORMAT
     COMMENT = 'External stage for Aarhus municipality data';
 
 CREATE OR REPLACE STAGE ODENSE_STAGE
-    STORAGE_INTEGRATION = TRACKMAN
-    URL = 's3://ubulut-iceberg-oregon/kmd/odense/'
+    STORAGE_INTEGRATION = KMD_S3_INTEGRATION
+    URL = 's3://ubulut-iceberg-oregon/data/odense/'
     FILE_FORMAT = CSV_FORMAT
     COMMENT = 'External stage for Odense municipality data';
 
 CREATE OR REPLACE STAGE AALBORG_STAGE
-    STORAGE_INTEGRATION = TRACKMAN
-    URL = 's3://ubulut-iceberg-oregon/kmd/aalborg/'
+    STORAGE_INTEGRATION = KMD_S3_INTEGRATION
+    URL = 's3://ubulut-iceberg-oregon/data/aalborg/'
     FILE_FORMAT = CSV_FORMAT
     COMMENT = 'External stage for Aalborg municipality data';
 
 CREATE OR REPLACE STAGE ESBJERG_STAGE
-    STORAGE_INTEGRATION = TRACKMAN
-    URL = 's3://ubulut-iceberg-oregon/kmd/esbjerg/'
+    STORAGE_INTEGRATION = KMD_S3_INTEGRATION
+    URL = 's3://ubulut-iceberg-oregon/data/esbjerg/'
     FILE_FORMAT = CSV_FORMAT
     COMMENT = 'External stage for Esbjerg municipality data';
 
 -- Combined data stage (all municipalities)
 CREATE OR REPLACE STAGE COMBINED_STAGE
-    STORAGE_INTEGRATION = TRACKMAN
-    URL = 's3://ubulut-iceberg-oregon/kmd/combined/'
+    STORAGE_INTEGRATION = KMD_S3_INTEGRATION
+    URL = 's3://ubulut-iceberg-oregon/data/combined/'
     FILE_FORMAT = CSV_FORMAT
     COMMENT = 'External stage for combined municipality data';
 

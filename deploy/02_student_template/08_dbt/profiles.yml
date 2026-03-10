@@ -7,8 +7,8 @@ kmd_municipality:
       user: "{{ env_var('SNOWFLAKE_USER') }}"
       password: "{{ env_var('SNOWFLAKE_PASSWORD', '') }}"
       authenticator: "{{ env_var('SNOWFLAKE_AUTHENTICATOR', 'snowflake') }}"
-      role: "{{ env_var('SNOWFLAKE_ROLE', 'SYSADMIN') }}"
-      database: "{{ env_var('SNOWFLAKE_DATABASE', 'ESBJERG_DB') }}"
-      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'KMD_WH') }}"
-      schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'RAW') }}"
+      role: SYSADMIN
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      warehouse: KMD_WH
+      schema: RAW
       threads: 4

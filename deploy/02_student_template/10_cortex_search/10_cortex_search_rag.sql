@@ -37,6 +37,7 @@ USE SCHEMA DOCUMENTS;
 
 CREATE OR REPLACE STAGE PDF_STAGE
     DIRECTORY = (ENABLE = TRUE)
+    ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
     COMMENT = 'Stage for municipality education policy PDF documents';
 
 -- ============================================================================

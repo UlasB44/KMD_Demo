@@ -3,6 +3,8 @@ kmd_municipality:
   outputs:
     dev:
       type: snowflake
+      account: ""
+      user: ""
       database: "{{ env_var('DBT_DATABASE', 'ESBJERG_DB') }}"
       warehouse: KMD_WH
       role: SYSADMIN

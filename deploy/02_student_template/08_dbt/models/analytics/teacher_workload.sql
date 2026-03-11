@@ -18,9 +18,9 @@ SELECT
         WHEN COUNT(DISTINCT s.student_id) > 50 THEN 'MODERATE'
         ELSE 'LOW'
     END AS workload_level
-FROM {{ var('municipality') }}_DB.CLEAN.TEACHERS t
-LEFT JOIN {{ var('municipality') }}_DB.CLEAN.CLASSES c ON t.school_id = c.school_id
-LEFT JOIN {{ var('municipality') }}_DB.CLEAN.STUDENTS s 
+FROM {{ var('source_database') }}.CLEAN.TEACHERS t
+LEFT JOIN {{ var('source_database') }}.CLEAN.CLASSES c ON t.school_id = c.school_id
+LEFT JOIN {{ var('source_database') }}.CLEAN.STUDENTS s 
     ON c.class_id = s.class_id AND s.is_active = TRUE
 WHERE t.is_active = TRUE
 GROUP BY t.teacher_id, t.full_name, t.subjects, t.hire_date, t.salary_band

@@ -1,92 +1,49 @@
-# ============================================================================
-# DBT EXERCISE - Municipality Analytics Models
-# ============================================================================
-# This dbt project mirrors the Dynamic Tables from Step 7
-# but uses dbt for transformation instead
-# ============================================================================
-
-## Prerequisites
-- Complete Steps 01-04 (database, tables, snowpipe, streams/tasks)
-- Have data loaded in your CLEAN schema
+# dbt for Snowsight - Municipality Setup
 
 ## Quick Start
 
-### 1. Configure your profile
-Create/edit `~/.dbt/profiles.yml`:
+### 1. Update `dbt_project.yml` for your municipality
+
+Change these 3 values:
 ```yaml
-kmd_municipality:
-  target: dev
-  outputs:
-    dev:
-      type: snowflake
-      account: BGYLLYD-AJ65411
-      user: <your_username>
-      authenticator: externalbrowser
-      role: SYSADMIN
-      warehouse: KMD_WH
-      database: <MUNICIPALITY>_DB    # e.g., ESBJERG_DB
-      schema: ANALYTICS
-      threads: 4
+vars:
+  source_database: "COPENHAGEN_DB"    # Your database name
+  municipality_code: 101              # Your municipality code  
+  municipality_name: "Copenhagen"     # Your municipality name
 ```
 
-### 2. Run with your municipality variables
+### Municipality Codes
+| Municipality | Code | Database |
+|-------------|------|----------|
+| Copenhagen | 101 | COPENHAGEN_DB |
+| Aarhus | 751 | AARHUS_DB |
+| Odense | 461 | ODENSE_DB |
+| Aalborg | 851 | AALBORG_DB |
+| Esbjerg | 561 | ESBJERG_DB |
 
-**Option A: Override defaults via command line**
-```bash
-cd deploy/02_student_template/08_dbt
+### 2. profiles.yml (already configured)
+The profiles.yml uses `KMD_WH` warehouse and `SYSADMIN` role - no changes needed.
 
-# For Esbjerg (default)
-dbt run
+### 3. Run in Snowsight
+1. Go to Projects > dbt Projects
+2. Sync your Git repository
+3. Select the dbt project folder (`08_dbt`)
+4. Click **Run** or **Build**
 
-# For Copenhagen
-dbt run --vars '{"municipality": "COPENHAGEN", "municipality_code": 101, "municipality_name": "Copenhagen"}'
+## Troubleshooting
 
-# For Aarhus
-dbt run --vars '{"municipality": "AARHUS", "municipality_code": 751, "municipality_name": "Aarhus"}'
+### "No Profile" error
+Make sure `profiles.yml` exists in the same folder as `dbt_project.yml`.
 
-# For Odense
-dbt run --vars '{"municipality": "ODENSE", "municipality_code": 461, "municipality_name": "Odense"}'
+### "Invalid warehouse" error  
+The profiles.yml must have `warehouse: KMD_WH` specified.
 
-# For Aalborg
-dbt run --vars '{"municipality": "AALBORG", "municipality_code": 851, "municipality_name": "Aalborg"}'
+### Models show 0 rows
+Your CLEAN tables may be empty. Check:
+```sql
+SELECT COUNT(*) FROM {YOUR_DB}.CLEAN.STUDENTS;
+SELECT COUNT(*) FROM {YOUR_DB}.CLEAN.TEACHERS;
+SELECT COUNT(*) FROM {YOUR_DB}.CLEAN.CLASSES;
 ```
 
-**Option B: Edit dbt_project.yml defaults**
-Edit the `vars:` section in `dbt_project.yml` to match your municipality.
-
-### 3. Run tests
-```bash
-dbt test
-```
-
-### 4. Generate documentation
-```bash
-dbt docs generate
-dbt docs serve
-```
-
-## Models Created
-
-| Model | Output Table | Description |
-|-------|--------------|-------------|
-| students_by_grade | DBT_STUDENTS_BY_GRADE | Student demographics per grade |
-| class_enrollment | DBT_CLASS_ENROLLMENT | Enrollment vs capacity analysis |
-| teacher_workload | DBT_TEACHER_WORKLOAD | Teacher student load metrics |
-| municipality_overview | DBT_MUNICIPALITY_OVERVIEW | High-level KPIs |
-
-## Dynamic Tables vs dbt
-
-| Aspect | Dynamic Tables | dbt |
-|--------|----------------|-----|
-| Refresh | Automatic (TARGET_LAG) | Manual or scheduled |
-| Version Control | SQL in Snowflake | Git-tracked models |
-| Testing | Manual queries | Built-in test framework |
-| Documentation | Comments | Auto-generated docs |
-| Dependencies | Implicit | Explicit DAG |
-
-## Municipality Codes Reference
-- Copenhagen: 101
-- Aarhus: 751
-- Odense: 461
-- Aalborg: 851
-- Esbjerg: 561
+If empty, run the Initial Load section from `04_streams_tasks.sql`.

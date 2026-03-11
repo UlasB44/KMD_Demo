@@ -16,7 +16,7 @@ clean-targets:
   - "dbt_packages"
 
 vars:
-  municipality: "ESBJERG"
+  source_database: "ESBJERG_DB"
   municipality_code: 561
   municipality_name: "Esbjerg"
 

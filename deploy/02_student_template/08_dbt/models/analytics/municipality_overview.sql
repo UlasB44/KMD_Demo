@@ -17,9 +17,9 @@ SELECT
     SUM(c.max_students) AS total_capacity,
     ROUND(COUNT(DISTINCT s.student_id) * 100.0 / NULLIF(SUM(c.max_students), 0), 1) AS capacity_utilization_pct,
     CURRENT_TIMESTAMP() AS last_refreshed
-FROM {{ var('municipality') }}_DB.CLEAN.STUDENTS s
-FULL OUTER JOIN {{ var('municipality') }}_DB.CLEAN.TEACHERS t 
+FROM {{ var('source_database') }}.CLEAN.STUDENTS s
+FULL OUTER JOIN {{ var('source_database') }}.CLEAN.TEACHERS t 
     ON s.municipality_code = t.municipality_code
-FULL OUTER JOIN {{ var('municipality') }}_DB.CLEAN.CLASSES c 
+FULL OUTER JOIN {{ var('source_database') }}.CLEAN.CLASSES c 
     ON s.class_id = c.class_id
 WHERE COALESCE(s.is_active, TRUE) = TRUE
